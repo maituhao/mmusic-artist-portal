@@ -246,96 +246,117 @@ async def submit_contract(release_id: str, request: Request):
     try:
         from docx import Document
         from docx.shared import Inches
+        import uuid
         
-        form = await request.form()
+        form_data = await request.form()
+        contract_type = form_data.get("contractType", "personal")
+        artist_name = release_data.get("artist_name", "Artist")
         
         doc = Document()
-        doc.add_heading("Hợp Đồng Phát Hành Nhạc", 0)
-        
-        contract_type = form.get('contractType')
-        artist_name = "Unknown_Artist"
+        doc.add_heading("THÔNG TIN HỢP ĐỒNG PHÁT HÀNH NHẠC", 0)
         
         if contract_type == "personal":
-            doc.add_heading("I. Thông tin khách hàng (cá nhân)", level=1)
-            artist_name = form.get('p_name', 'Unknown')
-            
-            info_lines = [
-                f"Họ tên người ký Hợp đồng: {artist_name}",
-                f"Nghệ danh: {form.get('p_stagename', '')}",
-                f"Sinh ngày: {form.get('p_dob', '')}",
-                f"CCCD số: {form.get('p_cccd', '')}",
-                f"Cấp ngày: {form.get('p_cccd_date', '')}",
-                f"Tại: {form.get('p_cccd_place', '')}",
-                f"Địa chỉ hiện tại (cũ): {form.get('p_address_old', '')}",
-                f"Địa chỉ hiện tại (mới): {form.get('p_address_new', '')}",
-                f"Điện thoại: {form.get('p_phone', '')}",
-                f"Email: {form.get('p_email', '')}",
-                f"Mã số thuế cá nhân: {form.get('p_tax', '')}",
-                f"Số tài khoản: {form.get('p_bank_num', '')}",
-                f"Tên tài khoản: {form.get('p_bank_name', '')}",
-                f"Ngân hàng: {form.get('p_bank_brand', '')}",
-                f"Chi nhánh: {form.get('p_bank_branch', '')}"
+            doc.add_heading("I. Thông tin khách hàng (Cá nhân)", level=1)
+            fields = [
+                ("Họ tên", "p_name"), ("Nghệ danh", "p_stagename"), ("Sinh ngày", "p_dob"), 
+                ("CCCD số", "p_cccd"), ("Cấp ngày", "p_cccd_date"), ("Tại", "p_cccd_place"),
+                ("Địa chỉ cũ", "p_address_old"), ("Địa chỉ hiện tại", "p_address_new"), 
+                ("Điện thoại", "p_phone"), ("Email", "p_email"), ("Mã số thuế", "p_tax"),
+                ("Số tài khoản", "p_bank_num"), ("Tên tài khoản", "p_bank_name"), 
+                ("Ngân hàng", "p_bank_brand"), ("Chi nhánh", "p_bank_branch")
             ]
-            for line in info_lines:
-                doc.add_paragraph(line)
+            for label, key in fields:
+                val = form_data.get(key, '')
+                if val: doc.add_paragraph(f"{label}: {val}")
                 
-            doc.add_heading("Ảnh CCCD:", level=2)
-            cccd_front = form.get('p_cccd_front')
-            cccd_back = form.get('p_cccd_back')
-            
-            # Helper func
-            async def add_image(file_obj, label):
-                if file_obj and hasattr(file_obj, 'filename') and file_obj.filename:
-                    temp_img_path = f"/tmp/{uuid.uuid4()}_{file_obj.filename}"
-                    with open(temp_img_path, "wb") as buffer:
-                        shutil.copyfileobj(file_obj.file, buffer)
-                    doc.add_paragraph(f"{label}:")
-                    try: doc.add_picture(temp_img_path, width=Inches(4.0))
-                    except: doc.add_paragraph("[Không thể chèn ảnh]")
-                    os.remove(temp_img_path)
-            
-            await add_image(cccd_front, "Mặt trước")
-            await add_image(cccd_back, "Mặt sau")
-            
-        elif contract_type == "company":
-            doc.add_heading("I. Thông tin khách hàng (công ty)", level=1)
-            artist_name = form.get('c_name', 'Unknown_Company')
-            
-            info_lines = [
-                f"Tên Công ty: {artist_name}",
-                f"Mã số doanh nghiệp: {form.get('c_tax', '')}",
-                f"Địa chỉ trụ sở chính: {form.get('c_address', '')}",
-                f"Người đại diện: {form.get('c_rep_name', '')}",
-                f"Chức vụ: {form.get('c_rep_title', '')}",
-                f"Điện thoại: {form.get('c_phone', '')}",
-                f"Email: {form.get('c_email', '')}",
-                f"Số tài khoản: {form.get('c_bank_num', '')}",
-                f"Tên tài khoản: {form.get('c_bank_name', '')}",
-                f"Ngân hàng: {form.get('c_bank_brand', '')}",
-                f"Chi nhánh: {form.get('c_bank_branch', '')}"
+            doc.add_heading("II. Thông tin bản ghi", level=1)
+            r_fields = [
+                ("Tên Bản ghi", "r_title"), ("Tác giả", "r_author"), 
+                ("Người trình bày", "r_singer"), ("Nhà Sản xuất", "r_producer"), 
+                ("Chủ sở hữu", "r_owner")
             ]
-            for line in info_lines:
-                doc.add_paragraph(line)
+            for label, key in r_fields:
+                val = form_data.get(key, '')
+                if val: doc.add_paragraph(f"{label}: {val}")
+                
+        else:
+            doc.add_heading("I. Thông tin khách hàng (Công ty)", level=1)
+            fields = [
+                ("CÔNG TY", "c_name"), ("Đại diện", "c_rep"), ("Chức vụ", "c_role"), 
+                ("Địa chỉ", "c_address"), ("Email", "c_email"), ("Số điện thoại", "c_phone"),
+                ("Tài khoản", "c_bank_num"), ("CHỦ TK", "c_bank_name"), 
+                ("Tại ngân hàng", "c_bank_brand"), ("Mã số thuế", "c_tax")
+            ]
+            for label, key in fields:
+                val = form_data.get(key, '')
+                if val: doc.add_paragraph(f"{label}: {val}")
+
+            doc.add_heading("II. Thông tin bản ghi", level=1)
+            r_fields = [
+                ("Tên Bản ghi", "r_title"), ("Tác giả", "r_author"), 
+                ("Người trình bày", "r_singer"), ("Nhà Sản xuất", "r_producer"), 
+                ("Chủ sở hữu", "r_owner")
+            ]
+            for label, key in r_fields:
+                val = form_data.get(key, '')
+                if val: doc.add_paragraph(f"{label}: {val}")
         
-        temp_doc_path = f"/tmp/Contract_Info_{release_id}.docx"
-        doc.save(temp_doc_path)
+        doc.add_paragraph("")
+        doc.add_paragraph("Thời hạn hợp tác (MMusic điền): " + "_" * 40)
+        doc.add_paragraph("Tỷ lệ chia sẻ doanh thu: 70/30 (nghệ sĩ 70%)")
+        doc.add_paragraph("")
+        
+        doc.add_heading("III. Hồ sơ đính kèm", level=1)
         
         creds = drive_service.get_credentials()
         service = drive_service.get_drive_service(creds)
         
-        query = f"'{target_folder_id}' in parents and name contains 'Thông tin HĐ' and trashed=false"
+        file_keys = ["cccd_front", "cccd_back", "vneid_img", "c_dkkd", "c_uyquyen"]
+        files_to_clean = []
+        
+        for key in file_keys:
+            uploaded_file = form_data.get(key)
+            if uploaded_file and hasattr(uploaded_file, "filename") and uploaded_file.filename:
+                ext = os.path.splitext(uploaded_file.filename)[1].lower()
+                tmp_path = f"/tmp/{uuid.uuid4()}{ext}"
+                
+                contents = await uploaded_file.read()
+                with open(tmp_path, "wb") as f:
+                    f.write(contents)
+                files_to_clean.append(tmp_path)
+                
+                doc.add_paragraph(f"--- Đính kèm ({key}): {uploaded_file.filename} ---")
+                if ext in ['.jpg', '.jpeg', '.png', '.gif']:
+                    try:
+                        doc.add_picture(tmp_path, width=Inches(6.0))
+                    except Exception as e:
+                        doc.add_paragraph(f"(Lỗi chèn ảnh vào Word: {e})")
+                else:
+                    doc.add_paragraph("(File này không phải ảnh, đã được upload riêng lên thư mục Contract Info)")
+                    drive_service.upload_file(service, tmp_path, uploaded_file.filename, target_folder_id)
+
+        clean_name = "".join([c if c.isalnum() else "_" for c in str(artist_name)])
+        docx_filename = f"Contract_Info_{clean_name}_{release_id}.docx"
+        docx_path = f"/tmp/{docx_filename}"
+        doc.save(docx_path)
+        
+        # Override the old file if exists
+        query = f"'{target_folder_id}' in parents and name contains 'Contract_Info_' and trashed=false"
         results = service.files().list(q=query, spaces='drive', fields='files(id)').execute()
         for item in results.get('files', []):
             try: service.files().delete(fileId=item['id']).execute()
             except: pass
-            
-        new_name = f"Thông tin HĐ - {artist_name}.docx"
-        uploaded = drive_service.upload_file(service, temp_doc_path, new_name, target_folder_id)
+
+        drive_service.upload_file(service, docx_path, docx_filename, target_folder_id)
         
-        os.remove(temp_doc_path)
+        if os.path.exists(docx_path):
+            os.remove(docx_path)
+        for f in files_to_clean:
+            if os.path.exists(f):
+                os.remove(f)
+                
         update_release_status(release_id, "contract")
-        
-        return JSONResponse({"message": "Success", "link": uploaded.get("webViewLink")})
+        return JSONResponse({"message": "Successfully generated and uploaded Contract Info."})
         
     except Exception as e:
         import traceback
