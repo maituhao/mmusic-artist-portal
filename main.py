@@ -3,7 +3,7 @@ import json
 import uuid
 import shutil
 import datetime
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Form, File, UploadFile
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -60,6 +60,21 @@ class TrackInfo(BaseModel):
     explicit: str = "No"
     tiktok: str = ""
     lyrics: str = ""
+
+class PRFormRequest(BaseModel):
+    q1: Optional[str] = ""
+    q2: Optional[str] = ""
+    q3: Optional[str] = ""
+    q4: Optional[str] = ""
+    q5: Optional[str] = ""
+    q6: Optional[str] = ""
+    q7: Optional[str] = ""
+    q8: Optional[str] = ""
+    q9: Optional[str] = ""
+    q10: Optional[str] = ""
+    q11: Optional[str] = ""
+    q12: Optional[str] = ""
+    q13: Optional[str] = ""
 
 class LabelFormRequest(BaseModel):
     productTitle: str
@@ -325,4 +340,131 @@ async def submit_contract(release_id: str, request: Request):
     except Exception as e:
         import traceback
         traceback.print_exc()
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.post("/api/release/{release_id}/submit-pr-form")
+async def submit_pr_form(release_id: str, payload: PRFormRequest):
+    release_data = get_release(release_id)
+    if not release_data:
+        return JSONResponse({"error": "Release not found"}, status_code=404)
+        
+    folder_ids = release_data.get("folder_ids", {})
+    target_folder_id = folder_ids.get("product_root")
+    
+    if not target_folder_id:
+        return JSONResponse({"error": "Product root folder ID not found"}, status_code=500)
+        
+    try:
+        from docx import Document
+        import uuid
+        
+        doc = Document()
+        doc.add_heading("BẢNG CÂU HỎI TRUYỀN THÔNG (PR QUESTIONNAIRE)", 0)
+        
+        questions = [
+            "1. Mô tả một vài dòng về bài hát",
+            "2. Giới thiệu về bản thân và về sản phẩm bạn sắp phát hành",
+            "3. Bạn có đến từ hội nhóm, crew hay team nào không? Có thể giới thiệu qua một chút không?",
+            "4. Cảm hứng sáng tác bài hát này của bạn đến từ đâu?",
+            "5. Nếu là sản phẩm hợp tác, có thể chia sẻ một chút về lí do hợp tác và sự đồng điệu như thế nào?",
+            "6. Thời điểm phát hành bài hát này có gì đặc biệt hay không?",
+            "7. Có ý nghĩa gì sâu xa từ cách đặt tên bài hát của bạn không?",
+            "8. Chất liệu âm nhạc chính/Thể loại của bài hát là gì? Vì sao?",
+            "9. Bạn mong muốn gửi gắm điều gì tới khán giả khi nghe bài hát?",
+            "10. Sản phẩm này là một trải nghiệm mới hay là thế mạnh trước giờ của bạn?",
+            "11. Bạn có kỷ niệm đặc biệt nào trong quá trình sản xuất bài hát không?",
+            "12. Bạn có thể chia sẻ thêm một chút về những dự định trong tương lai gần hay không?",
+            "13. Chi tiết thêm nghệ sĩ muốn chia sẻ:"
+        ]
+        
+        answers = [
+            payload.q1, payload.q2, payload.q3, payload.q4, payload.q5,
+            payload.q6, payload.q7, payload.q8, payload.q9, payload.q10,
+            payload.q11, payload.q12, payload.q13
+        ]
+        
+        for q, a in zip(questions, answers):
+            doc.add_heading(q, level=2)
+            doc.add_paragraph(a if a.strip() else "(Không có chia sẻ)")
+            
+        artist_name = release_data.get("artist_name", "Artist")
+        product_title = release_data.get("product_name", "Product")
+        clean_product = "".join([c if c.isalnum() else "_" for c in str(product_title)])
+        
+        docx_filename = f"[PR] {clean_product}_{release_id}.docx"
+        docx_path = f"/tmp/{docx_filename}"
+        doc.save(docx_path)
+        
+        creds = drive_service.get_credentials()
+        service = drive_service.get_drive_service(creds)
+        drive_service.upload_file(service, docx_path, docx_filename, target_folder_id)
+        
+        if os.path.exists(docx_path):
+            os.remove(docx_path)
+                
+        update_release_status(release_id, "pr_form")
+        return JSONResponse({"message": "Successfully generated and uploaded PR Questionnaire."})
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/release/{release_id}/upload")
+async def upload_release_files(
+    release_id: str,
+    category: str = Form(...),
+    files: List[UploadFile] = File(...)
+):
+    release_data = get_release(release_id)
+    if not release_data:
+        return JSONResponse({"error": "Release not found"}, status_code=404)
+    
+    folder_ids = release_data.get("folder_ids", {})
+    
+    category_map = {
+        "label_form": "1. Label form (track info)",
+        "audio": "2. Audio (16-24 BIT DEPTH)",
+        "artwork": "3. Artwork (3000x3000)",
+        "artist_picture": "4. Artist_s Picture (cover - profile)",
+        "contract": "5. Contract Info",
+        "mv": "6. MV (nếu có)",
+        "canvas": "7. Spotify Canvas (4-8s, 9_16)",
+        "others": "8. Other materials"
+    }
+    
+    target_folder_name = category_map.get(category)
+    if not target_folder_name:
+        return JSONResponse({"error": "Invalid category"}, status_code=400)
+    
+    target_folder_id = folder_ids.get(target_folder_name)
+    if not target_folder_id:
+        return JSONResponse({"error": "Folder ID not found for this category"}, status_code=500)
+
+    try:
+        creds = drive_service.get_credentials()
+        service = drive_service.get_drive_service(creds)
+        uploaded_results = []
+        for file in files:
+            temp_path = f"/tmp/{uuid.uuid4()}_{file.filename}"
+            with open(temp_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            
+            uploaded = drive_service.upload_file(
+                service, 
+                temp_path, 
+                file.filename, 
+                target_folder_id
+            )
+            os.remove(temp_path)
+            uploaded_results.append({
+                "filename": file.filename, 
+                "link": uploaded.get("webViewLink")
+            })
+            
+        update_release_status(release_id, category)
+        return JSONResponse({"message": "Upload successful", "files": uploaded_results})
+    except Exception as e:
+        print(f"Upload error: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
