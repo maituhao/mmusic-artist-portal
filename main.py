@@ -105,7 +105,11 @@ async def serve_portal():
 async def get_release_status(release_id: str):
     data = get_release(release_id)
     if data:
-        return JSONResponse({"status": "success", "data": data})
+        return JSONResponse({
+            "artist_name": data.get("artist_name"),
+            "product_name": data.get("product_name"),
+            "status": data.get("status", {})
+        })
     return JSONResponse({"error": "Không tìm thấy release"}, status_code=404)
 
 @app.post("/api/release/{release_id}/label-form")
