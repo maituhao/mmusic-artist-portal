@@ -1,0 +1,2573 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artist Upload Portal | MMUSIC</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link href="https://unpkg.com/geist/dist/fonts/geist-sans/style.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg-color: #0a0a0f;
+            --bg-dim: 0.82;
+            --surface: rgba(255, 255, 255, 0.06);
+            --surface-hover: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-custom: #f8fafc;
+            --border: rgba(255, 255, 255, 0.12);
+            --success: #34d399;
+            --error: #f87171;
+            --glass-blur: 12px;
+            --glass-saturate: 120%;
+            --glass-border: rgba(255, 255, 255, 0.18);
+            --glass-highlight: rgba(255, 255, 255, 0.08);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Geist Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            background-image: url('/static/bg-pc.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 2rem;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, var(--bg-dim));
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        /* Animated aurora blobs behind glass - optimized */
+        body::after {
+            content: '';
+            position: fixed;
+            width: 100vw;
+            height: 100vh;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            pointer-events: none;
+            background:
+                radial-gradient(ellipse 600px 400px at 25% 15%, rgba(99, 102, 241, 0.18), transparent),
+                radial-gradient(ellipse 500px 350px at 75% 85%, rgba(192, 132, 252, 0.14), transparent),
+                radial-gradient(ellipse 450px 300px at 65% 25%, rgba(56, 189, 248, 0.1), transparent),
+                radial-gradient(ellipse 350px 250px at 15% 75%, rgba(52, 211, 153, 0.08) 0%, transparent 60%);
+            animation: auroraShift 25s ease-in-out infinite alternate;
+            transform: translateZ(0);
+        }
+
+        /* Pause aurora when modal is open to save GPU */
+        body.modal-open::after {
+            animation-play-state: paused;
+        }
+
+        @keyframes auroraShift {
+            0% {
+                transform: translateZ(0) translate(0, 0) scale(1);
+            }
+
+            50% {
+                transform: translateZ(0) translate(15px, -10px) scale(1.02);
+            }
+
+            100% {
+                transform: translateZ(0) translate(-10px, 10px) scale(0.98);
+            }
+        }
+
+        /* ═══════ LIQUID GLASS CONTAINER ═══════ */
+        .container {
+            background: linear-gradient(135deg,
+                    rgba(255, 255, 255, 0.07) 0%,
+                    rgba(255, 255, 255, 0.025) 50%,
+                    rgba(255, 255, 255, 0.055) 100%);
+            backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            padding: 3rem;
+            width: 100%;
+            max-width: 800px;
+            box-shadow:
+                var(--glass-shadow),
+                inset 0 1px 0 var(--glass-highlight),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.03),
+                0 0 0 0.5px rgba(255, 255, 255, 0.05);
+            animation: glassAppear 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+        }
+
+        /* Subtle top-edge shine */
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 10%;
+            right: 10%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+            border-radius: 1px;
+            pointer-events: none;
+        }
+
+        @keyframes glassAppear {
+            from {
+                opacity: 0;
+                transform: translateY(24px) scale(0.97);
+                filter: blur(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                filter: blur(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 0.25rem;
+            background: linear-gradient(135deg, #a5b4fc, #c084fc, #f0abfc);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            animation: shimmerText 6s ease-in-out infinite alternate;
+            background-size: 200% 200%;
+        }
+
+        @keyframes shimmerText {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            100% {
+                background-position: 100% 50%;
+            }
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-size: 1rem;
+        }
+
+        /* ═══════ GLASS RELEASE INFO ═══════ */
+        .release-info {
+            background: rgba(99, 102, 241, 0.08);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            padding: 1.5rem;
+            border-radius: 18px;
+            margin-bottom: 2rem;
+            text-align: center;
+            display: none;
+            box-shadow: inset 0 1px 0 rgba(99, 102, 241, 0.1);
+        }
+
+        .release-info .label {
+            font-size: 0.85rem;
+            color: #a5b4fc;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .release-info .title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 0.25rem;
+        }
+
+        .release-info .artist {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+        }
+
+        /* ═══════ GLASS TRIGGER CARDS ═══════ */
+        .label-trigger-card {
+            background: rgba(99, 102, 241, 0.08);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: 18px;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Glass shimmer on hover */
+        .label-trigger-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+            transition: left 0.5s ease;
+            pointer-events: none;
+        }
+
+        .label-trigger-card:hover::after {
+            left: 100%;
+        }
+
+        .label-trigger-card:hover {
+            background: rgba(99, 102, 241, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.15);
+        }
+
+        .label-trigger-card .icon {
+            font-size: 2.5rem;
+            filter: grayscale(0) opacity(1);
+            text-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .label-trigger-card .content {
+            flex: 1;
+        }
+
+        .label-trigger-card .content h3 {
+            margin: 0 0 0.25rem 0;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .label-trigger-card .content p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .label-trigger-card .status {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 99px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .label-trigger-card.completed .status {
+            background: rgba(52, 211, 153, 0.15);
+            color: var(--success);
+            border-color: rgba(52, 211, 153, 0.25);
+        }
+
+        .label-trigger-card.completed {
+            border-color: rgba(52, 211, 153, 0.25);
+            background: rgba(52, 211, 153, 0.05);
+        }
+
+        /* ═══════ GLASS UPLOAD CARDS ═══════ */
+        .upload-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            display: none;
+        }
+
+        .upload-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 18px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .upload-card:hover,
+        .upload-card.dragover {
+            border-color: rgba(99, 102, 241, 0.5);
+            border-style: solid;
+            background: rgba(99, 102, 241, 0.06);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.1);
+        }
+
+        .upload-card.success-border {
+            border-color: rgba(52, 211, 153, 0.4);
+            border-style: solid;
+            background: rgba(52, 211, 153, 0.05);
+        }
+
+        .upload-card input[type="file"] {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .upload-card .icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            filter: grayscale(1) opacity(0.7);
+            transition: all 0.3s;
+        }
+
+        .upload-card:hover .icon,
+        .upload-card.has-file .icon {
+            filter: grayscale(0) opacity(1);
+        }
+
+        .upload-card .name {
+            font-weight: 600;
+            font-size: 1.05rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-card .desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .upload-card .file-list {
+            position: relative;
+            z-index: 11;
+            margin-top: 1rem;
+            text-align: left;
+            font-size: 0.85rem;
+            color: #c084fc;
+        }
+
+        .file-item {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .file-item::before {
+            content: '📄';
+            font-size: 0.9em;
+        }
+
+        /* ═══════ GLASS SUBMIT BUTTON ═══════ */
+        .upload-btn {
+            width: 100%;
+            padding: 1.25rem;
+            background: linear-gradient(135deg, var(--primary), #8b5cf6, #c084fc);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            font-family: inherit;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .upload-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .upload-btn:active {
+            transform: translateY(0);
+        }
+
+        /* ═══════ LOADING STATES ═══════ */
+        #loadingState {
+            text-align: center;
+            padding: 3rem 0;
+            color: var(--text-muted);
+        }
+
+        #errorState {
+            text-align: center;
+            padding: 3rem 0;
+            color: var(--error);
+            display: none;
+            background: rgba(239, 68, 68, 0.08);
+            border-radius: 18px;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        /* ═══════ GLASS PROGRESS MODAL ═══════ */
+        #progressOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(6, 6, 15, 0.97);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .progress-box {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 2.5rem;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.08);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s infinite linear;
+            margin: 0 auto 1.5rem;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .progress-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-subtext {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .success-checkmark {
+            display: none;
+            font-size: 3rem;
+            color: var(--success);
+            margin-bottom: 1rem;
+        }
+
+        /* ═══════ GLASS MODAL STYLES ═══════ */
+        #labelFormModal {
+            position: fixed;
+            inset: 0;
+            background: rgba(6, 6, 15, 0.97);
+            z-index: 200;
+            display: none;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg,
+                    rgba(15, 20, 45, 0.92) 0%,
+                    rgba(10, 12, 30, 0.95) 50%,
+                    rgba(15, 20, 45, 0.92) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 28px;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            position: relative;
+            animation: glassAppear 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            padding: 2.5rem;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        /* Modal top-edge shine */
+        .modal-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 15%;
+            right: 15%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            border-radius: 1px;
+            pointer-events: none;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.5rem;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: rgba(239, 68, 68, 0.7);
+            border-color: rgba(239, 68, 68, 0.5);
+            transform: rotate(90deg);
+        }
+
+        .form-section {
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .form-section h2 {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            font-size: 1.3rem;
+            color: #a5b4fc;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group.full {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .form-group label span.req {
+            color: var(--error);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0.85rem 1rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            color: white;
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: border-color 0.15s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: rgba(99, 102, 241, 0.6);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: rgba(148, 163, 184, 0.5);
+        }
+
+        /* Fix dark-mode calendar/clock icons */
+        .form-group input[type="time"],
+        .form-group input[type="date"] {
+            color-scheme: dark;
+        }
+        .form-group input[type="time"]::-webkit-calendar-picker-indicator,
+        .form-group input[type="date"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 4px;
+            opacity: 0.8;
+            transition: opacity 0.2s ease;
+        }
+        
+        .form-group input[type="time"]::-webkit-calendar-picker-indicator:hover,
+        .form-group input[type="date"]::-webkit-calendar-picker-indicator:hover {
+            opacity: 1;
+        }
+
+        .form-group .hint {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 0.2rem;
+        }
+
+        .track-box {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 18px;
+            margin-bottom: 1.5rem;
+        }
+
+        .track-box h4 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: #c084fc;
+        }
+
+        /* ═══════ CUSTOM SCROLLBAR ═══════ */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Reduce motion for users who prefer it */
+        @media (prefers-reduced-motion: reduce) {
+            body::after {
+                animation: none !important;
+            }
+
+            .container {
+                animation: none !important;
+            }
+
+            .modal-content {
+                animation: none !important;
+            }
+
+            h1 {
+                animation: none !important;
+            }
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 0.75rem;
+                overflow-x: hidden;
+            }
+
+            body::after {
+                display: none;
+            }
+
+            /* ── Main container ── */
+            .container {
+                padding: 1.25rem 1rem;
+                padding-top: 3rem; /* space for lang toggle above logo */
+                border-radius: 22px;
+                overflow: hidden;
+                max-width: 100%;
+                box-sizing: border-box;
+                width: 100%;
+            }
+
+            /* ── Logo ── */
+            #portalLogo {
+                max-width: 55% !important;
+                max-height: 50px !important;
+                height: auto !important;
+            }
+
+            /* ── Language toggle ── */
+            .lang-toggle {
+                position: absolute;
+                top: 0.75rem;
+                left: 0.75rem;
+                font-size: 0.75rem;
+                padding: 0.25rem 0.6rem;
+                z-index: 15;
+            }
+
+            /* ── Settings gear ── */
+            .settings-gear {
+                top: 0.75rem;
+                right: 0.75rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .subtitle {
+                margin-bottom: 1.25rem;
+                font-size: 0.85rem;
+            }
+
+            .upload-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .upload-card {
+                padding: 1.25rem;
+            }
+
+            .upload-btn {
+                padding: 1rem;
+                font-size: 1rem;
+            }
+
+            /* ── Modal: full-width on mobile ── */
+            #labelFormModal,
+            #contractFormModal {
+                padding: 0.5rem;
+                box-sizing: border-box;
+            }
+
+            .modal-content {
+                padding: 1.25rem 0.85rem;
+                width: 100%;
+                max-width: 100%;
+                border-radius: 18px;
+                box-sizing: border-box;
+                overflow-x: hidden;
+            }
+
+            .modal-close {
+                top: 1rem;
+                right: 1rem;
+                width: 34px;
+                height: 34px;
+                font-size: 1.25rem;
+            }
+
+            /* ── Overflow fix at every parent level ── */
+            .form-section {
+                overflow: hidden;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+                max-width: 100%;
+                overflow: hidden;
+            }
+
+            .form-group {
+                max-width: 100%;
+                overflow: hidden;
+                min-width: 0;
+            }
+
+            .track-box {
+                padding: 1rem;
+                overflow: hidden;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            .track-box .form-grid {
+                max-width: 100%;
+            }
+
+            /* ── All inputs: force fit within parent ── */
+            .form-group input,
+            .form-group select,
+            .form-group textarea {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                box-sizing: border-box !important;
+            }
+
+            /* date/time inputs on iOS need extra care */
+            .form-group input[type="date"],
+            .form-group input[type="time"] {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 100% !important;
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            .form-section h2 {
+                font-size: 1.1rem;
+                word-break: break-word;
+            }
+
+            .label-trigger-card {
+                padding: 1rem;
+                flex-direction: column;
+                text-align: center;
+                gap: 0.75rem;
+            }
+
+            .label-trigger-card .status {
+                font-size: 0.8rem;
+                padding: 0.4rem 0.8rem;
+            }
+
+            .release-info .title {
+                font-size: 1.2rem;
+            }
+
+            .release-info {
+                padding: 1rem;
+            }
+
+            /* ── Form inside modal ── */
+            #metadataForm,
+            #contractForm {
+                max-width: 100%;
+                overflow-x: hidden;
+            }
+        }
+
+        /* ═══════ LANGUAGE TOGGLE ═══════ */
+        .lang-toggle {
+            position: absolute;
+            top: 1.5rem;
+            left: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 99px;
+            padding: 0.35rem 0.85rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+            transition: background 0.2s, border-color 0.2s;
+            z-index: 10;
+            user-select: none;
+        }
+
+        .lang-toggle:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .lang-toggle .flag {
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+
+        /* ═══════ SETTINGS GEAR & PANEL ═══════ */
+        .settings-gear {
+            display: none;
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+            font-size: 1.2rem;
+            z-index: 10;
+        }
+
+        .settings-gear:hover {
+            opacity: 1;
+        }
+
+        .settings-panel {
+            display: none;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            animation: slideUp 0.3s ease-out;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container" style="position: relative;">
+        <!-- Language Toggle -->
+        <div class="lang-toggle" id="langToggle" onclick="toggleLanguage()" title="Switch language">
+            <span class="flag" id="langFlag">🇻🇳</span>
+            <span id="langLabel">VI</span>
+        </div>
+
+        <!-- Settings Gear (hidden by default - click logo to reveal) -->
+        <div class="settings-gear" id="settingsGear"
+            onclick="document.getElementById('settingsPanel').style.display = document.getElementById('settingsPanel').style.display === 'none' ? 'block' : 'none'"
+            title="Cài đặt giao diện">
+            ⚙️
+        </div>
+
+        <div style="text-align: center; margin-bottom: 1rem;">
+            <img src="/static/logo.png" alt="MMusic Logo" id="portalLogo"
+                style="max-height: 69px; transition: max-height 0.1s; cursor: pointer;" title="🤫"
+                onclick="revealGear()" onerror="this.style.display='none'">
+        </div>
+
+        <!-- Settings Panel -->
+        <div class="settings-panel" id="settingsPanel">
+            <label
+                style="font-size: 0.85rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; color: var(--text-muted);">
+                <span data-i18n="settings_logo_size">Chỉnh kích cỡ Logo:</span>
+                <span id="logoSizeVal">69px</span>
+            </label>
+            <input type="range" id="logoSizeSlider" min="20" max="300" value="69" style="width: 100%;"
+                oninput="updatePortalLogoSize(this.value)">
+        </div>
+
+        <h1 data-i18n="page_title">Artist Portal</h1>
+        <p class="subtitle" data-i18n="page_subtitle">Securely transfer your release assets</p>
+
+        <div id="loadingState">
+            <div class="spinner" style="width: 30px; height: 30px; border-width: 3px;"></div>
+            <span data-i18n="loading">Đang tải thông tin phát hành...</span>
+        </div>
+
+        <div id="errorState">
+            <h3 data-i18n="error_title">Liên kết không hợp lệ</h3>
+            <p id="errorMsg" data-i18n="error_msg">Liên kết upload không hợp lệ hoặc đã hết hạn.</p>
+        </div>
+
+        <div id="releaseInfo" class="release-info">
+            <div class="label" data-i18n="release_initiated">Sản Phẩm</div>
+            <div class="title" id="rProduct">Loading...</div>
+            <div class="artist" id="rArtist">Loading...</div>
+        </div>
+
+        <!-- Label Form Trigger -->
+        <div class="label-trigger-card" id="labelTriggerCard" onclick="openLabelFormModal()">
+            <div class="icon">📝</div>
+            <div class="content">
+                <h3 data-i18n="label_form_title">Product Label Form</h3>
+                <p data-i18n="label_form_desc">Khai báo Metadata phát hành cho sản phẩm (Bắt buộc)</p>
+            </div>
+            <div class="status" id="labelTriggerStatus" data-i18n="status_not_filled">Chưa Điền</div>
+        </div>
+
+        <!-- Contract Form Trigger -->
+        <div class="label-trigger-card" id="contractTriggerCard" onclick="openContractFormModal()"
+            style="margin-top: 1rem;">
+            <div class="icon">🤝</div>
+            <div class="content">
+                <h3 data-i18n="contract_title">Contract Info</h3>
+                <p data-i18n="contract_desc">Khai báo thông tin hợp đồng phát hành nhạc (Bắt buộc)</p>
+            </div>
+            <div class="status" id="contractTriggerStatus" data-i18n="status_not_filled">Chưa Điền</div>
+        </div>
+
+
+        <form id="uploadForm">
+            <div class="upload-grid" id="uploadGrid">
+                <!-- Categories will be generated by JS -->
+            </div>
+
+            <!-- PR Trigger Card -->
+            <div class="label-trigger-card" id="prTriggerCard" onclick="openPrFormModal()"
+                style="margin-top: 1.5rem; background: rgba(56, 189, 248, 0.1); border-color: rgba(56, 189, 248, 0.3);">
+                <div class="icon">💬</div>
+                <div class="content">
+                    <h3 data-i18n="pr_title">Câu Hỏi Về Sản Phẩm</h3>
+                    <p data-i18n="pr_desc">Chia sẻ thêm thông tin (Tùy chọn)</p>
+                </div>
+                <div class="status" id="prTriggerStatus" data-i18n="status_not_filled">Chưa Điền</div>
+            </div>
+
+            <button type="submit" class="upload-btn" id="submitBtn" style="margin-top: 1.5rem;"
+                data-i18n="submit_files">Submit Files</button>
+        </form>
+    </div>
+
+    <div id="progressOverlay">
+        <div class="progress-box">
+            <div class="spinner" id="modalSpinner"></div>
+            <div class="success-checkmark" id="modalSuccess">✓</div>
+            <div class="progress-text" id="modalStatus">Processing uploads...</div>
+            <div class="progress-subtext" id="modalSubstatus">0 / 0 categories complete</div>
+        </div>
+    </div>
+
+    <!-- LABEL FORM MODAL -->
+    <div id="labelFormModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeLabelFormModal()">×</button>
+            <h1 style="text-align:left; margin-top:0;" data-i18n="label_modal_title">Label Form</h1>
+            <p style="color:var(--text-muted); margin-bottom:2rem;" data-i18n="label_modal_desc">Điền đầy đủ thông tin
+                chi tiết của sản phẩm để tự
+                động khởi tạo trên Google Drive.</p>
+
+            <form id="metadataForm">
+                <!-- PRODUCT INFO -->
+                <div class="form-section">
+                    <h2 data-i18n="product_info">💿 Product Info</h2>
+                    <div class="form-grid">
+                        <div class="form-group full">
+                            <label data-i18n="product_name">Tên sản phẩm <span class="req">*</span></label>
+                            <input type="text" name="productTitle" id="pf_title" required
+                                placeholder="VD: Kho Báu (ghi đúng in hoa & viết thường)">
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="product_type">Loại sản phẩm <span class="req">*</span></label>
+                            <select name="productType" required>
+                                <option value="" disabled selected data-i18n="select_type">Chọn loại</option>
+                                <option value="Single">Single</option>
+                                <option value="EP">EP</option>
+                                <option value="Album">Album</option>
+                            </select>
+                            <div class="hint">Single (1-3 track, >10 phút)<br>EP (4-6 track, 15-22 phút)<br>Album (7-29
+                                track, 35-60 phút)</div>
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="performing_artist">Nghệ sĩ biểu diễn <span class="req">*</span></label>
+                            <input type="text" name="productArtist" id="pf_artist" required
+                                placeholder="VD: (S)TRONG ft. Rhymastic">
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="genre">Thể loại (Genre) <span class="req">*</span></label>
+                            <input type="text" name="genre" required placeholder="VD: Pop, Hiphop, R&B">
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="track_count">Số lượng Track <span class="req">*</span></label>
+                            <input type="number" name="trackCount" id="trackCountInput" required min="1" value="1"
+                                oninput="generateTrackForms()">
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="release_date">Ngày phát hành <span class="req">*</span></label>
+                            <input type="date" name="releaseDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="release_time">Giờ phát hành <span class="req">*</span></label>
+                            <input type="time" name="releaseTime" required>
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="preorder_date">Ngày Pre-order (Tùy chọn)</label>
+                            <input type="date" name="preorderDate">
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="preorder_time">Giờ Pre-order (Tùy chọn)</label>
+                            <input type="time" name="preorderTime">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TRACK INFO (DYNAMIC) -->
+                <div class="form-section" style="border-bottom:none;">
+                    <h2 data-i18n="track_info">🎵 Track Info</h2>
+                    <div id="tracksContainer">
+                        <!-- Tracks pushed here -->
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:1rem; margin-top:1rem;">
+                    <button type="button" class="upload-btn"
+                        style="display:flex; width:auto; padding: 1rem 2rem; background:rgba(255,255,255,0.1); box-shadow:none;"
+                        onclick="closeLabelFormModal()" data-i18n="cancel">Hủy</button>
+                    <button type="submit" class="upload-btn" style="display:flex; width:auto; padding: 1rem 2.5rem;"
+                        id="submitMetadataBtn" data-i18n="save_label">Lưu & Khởi Tạo Form Excel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CONTRACT FORM MODAL -->
+    <div id="contractFormModal"
+        style="display:none; position:fixed; inset:0; background:rgba(6,6,15,0.97); z-index:200; padding:2rem; overflow-y:auto;">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeContractFormModal()">×</button>
+            <h1 style="text-align:left; margin-top:0;" data-i18n="contract_modal_title">Contract Info</h1>
+            <p style="color:var(--text-muted); margin-bottom:2rem;" data-i18n="contract_modal_desc">Điền thông tin hợp
+                đồng phát hành nhạc. Hệ thống sẽ
+                tự tạo file Word.</p>
+
+            <form id="contractForm" onsubmit="submitContractForm(event)">
+                <div class="form-section">
+                    <div class="form-group full">
+                        <label data-i18n="contract_type_label">Hình thức ký Hợp đồng <span class="req">*</span></label>
+                        <select id="contractType" name="contractType" required onchange="toggleContractFields()">
+                            <option value="personal" data-i18n="contract_personal">Ký Cá nhân</option>
+                            <option value="company" data-i18n="contract_company">Ký theo Công ty</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- PERSONAL FORMAT -->
+                <div id="personalSection" class="form-section" style="border-bottom:none;">
+                    <h2 data-i18n="personal_info">👤 Thông tin khách hàng (cá nhân)</h2>
+                    <div class="form-grid">
+                        <div class="form-group"><label data-i18n="full_name">Họ tên người ký Hợp đồng <span
+                                    class="req">*</span></label><input type="text" name="p_name"></div>
+                        <div class="form-group"><label data-i18n="stage_name">Nghệ danh <span
+                                    class="req">*</span></label><input type="text" name="p_stagename"></div>
+                        <div class="form-group"><label data-i18n="dob">Sinh ngày <span
+                                    class="req">*</span></label><input type="date" name="p_dob"></div>
+                        <div class="form-group"><label data-i18n="cccd_num">CCCD số <span
+                                    class="req">*</span></label><input type="text" name="p_cccd"></div>
+                        <div class="form-group"><label data-i18n="cccd_date">Cấp ngày <span
+                                    class="req">*</span></label><input type="date" name="p_cccd_date"></div>
+                        <div class="form-group"><label data-i18n="cccd_place">Tại <span
+                                    class="req">*</span></label><input type="text" name="p_cccd_place"></div>
+                        <div class="form-group full"><label data-i18n="address_old">Địa chỉ hiện tại (cũ)</label><input
+                                type="text" name="p_address_old"></div>
+                        <div class="form-group full"><label data-i18n="address_new">Địa chỉ hiện tại (theo hành chính
+                                mới từ
+                                01/07/2025)</label><input type="text" name="p_address_new"></div>
+                        <div class="form-group"><label data-i18n="phone">Điện thoại <span
+                                    class="req">*</span></label><input type="text" name="p_phone"></div>
+                        <div class="form-group"><label data-i18n="email">Email <span class="req">*</span></label><input
+                                type="email" name="p_email"></div>
+                        <div class="form-group full"><label data-i18n="tax_code">Mã số thuế cá nhân <span
+                                    class="req">*</span></label><input type="text" name="p_tax"></div>
+                        <div class="form-group"><label data-i18n="bank_account">Số tài khoản <span
+                                    class="req">*</span></label><input type="text" name="p_bank_num"></div>
+                        <div class="form-group"><label data-i18n="bank_holder">Tên tài khoản <span
+                                    class="req">*</span></label><input type="text" name="p_bank_name"></div>
+                        <div class="form-group"><label data-i18n="bank_name">Ngân hàng <span
+                                    class="req">*</span></label>
+                            <select name="p_bank_brand">
+                                <option value="" disabled selected>Đang tải danh sách ngân hàng...</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label data-i18n="bank_branch">Chi nhánh</label><input type="text"
+                                name="p_bank_branch"></div>
+                    </div>
+
+                    <h2 style="margin-top: 2rem;" data-i18n="personal_docs">📸 Ảnh Giấy tờ cá nhân</h2>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label data-i18n="cccd_front">Hình CCCD mặt trước <span class="req">*</span></label>
+                            <input type="file" style="padding: 0.5rem;" name="cccd_front" accept="image/*">
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="cccd_back">Hình CCCD mặt sau <span class="req">*</span></label>
+                            <input type="file" style="padding: 0.5rem;" name="cccd_back" accept="image/*">
+                        </div>
+                        <div class="form-group full">
+                            <label data-i18n="vneid_img">Hình chụp CCCD điện tử (VNeID)</label>
+                            <input type="file" style="padding: 0.5rem;" name="vneid_img" accept="image/*">
+                            <div class="hint" data-i18n="vneid_hint">Chụp màn hình trang "Căn cước điện tử" trong ứng
+                                dụng VNeID (như mẫu bên
+                                dưới).</div>
+                            <details style="margin-top: 0.5rem; cursor: pointer;">
+                                <summary style="font-size: 0.8rem; color: #818cf8; user-select: none;"
+                                    data-i18n="vneid_sample">📷 Xem ảnh mẫu
+                                    hướng dẫn chụp VNeID</summary>
+                                <img src="/static/vneid_sample.png" alt="Mẫu chụp VNeID"
+                                    style="margin-top: 0.5rem; max-width: 100%; border-radius: 12px; border: 1px solid var(--border);">
+                            </details>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- COMPANY FORMAT -->
+                <div id="companySection" class="form-section" style="display:none; border-bottom:none;">
+                    <h2 data-i18n="company_info">🏢 Trường hợp ký Công ty</h2>
+                    <div class="form-grid">
+                        <div class="form-group full"><label data-i18n="company_name">Tên CÔNG TY <span
+                                    class="req">*</span></label><input type="text" name="c_name"></div>
+                        <div class="form-group"><label data-i18n="company_rep">Đại diện <span
+                                    class="req">*</span></label><input type="text" name="c_rep"></div>
+                        <div class="form-group"><label data-i18n="company_role">Chức vụ <span
+                                    class="req">*</span></label><input type="text" name="c_role"></div>
+                        <div class="form-group full"><label data-i18n="company_address">Địa chỉ <span
+                                    class="req">*</span></label><input type="text" name="c_address"></div>
+                        <div class="form-group"><label data-i18n="email">Email <span class="req">*</span></label><input
+                                type="email" name="c_email"></div>
+                        <div class="form-group"><label data-i18n="phone">Số điện thoại <span
+                                    class="req">*</span></label><input type="text" name="c_phone"></div>
+                        <div class="form-group"><label data-i18n="company_bank_num">Tài khoản <span
+                                    class="req">*</span></label><input type="text" name="c_bank_num"></div>
+                        <div class="form-group"><label data-i18n="company_bank_holder">CHỦ TK <span
+                                    class="req">*</span></label><input type="text" name="c_bank_name"></div>
+                        <div class="form-group"><label data-i18n="company_bank_name">Tại ngân hàng <span
+                                    class="req">*</span></label>
+                            <select name="c_bank_brand">
+                                <option value="" disabled selected>Đang tải danh sách ngân hàng...</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label data-i18n="company_tax">Mã số thuế <span
+                                    class="req">*</span></label><input type="text" name="c_tax"></div>
+                    </div>
+
+                    <h2 style="margin-top: 2rem;" data-i18n="company_docs">📜 Giấy tờ Công ty</h2>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label data-i18n="company_dkkd">Giấy ĐKKD (PDF/Image) <span class="req">*</span></label>
+                            <input type="file" style="padding: 0.5rem;" name="c_dkkd" accept="image/*,application/pdf">
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="company_uyquyen">Giấy ủy quyền nghệ sĩ (PDF/Image) <span
+                                    class="req">*</span></label>
+                            <input type="file" style="padding: 0.5rem;" name="c_uyquyen"
+                                accept="image/*,application/pdf">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SHARED RECORDING INFO -->
+                <div id="recordingInfoSection" class="form-section"
+                    style="border-bottom:none; border-top: 1px dashed var(--border); padding-top: 1.5rem; margin-top: 1.5rem;">
+                    <h2 data-i18n="recording_info">💿 Thông tin bản ghi</h2>
+                    <div class="form-grid">
+                        <div class="form-group full"><label data-i18n="recording_name">Tên Bản ghi (Tên SP) <span
+                                    class="req">*</span></label><input type="text" name="r_title" required></div>
+                        <div class="form-group"><label data-i18n="recording_author">Tác giả [Nghệ danh(Tên thật)] <span
+                                    class="req">*</span></label><input type="text" name="r_author" required></div>
+                        <div class="form-group"><label data-i18n="recording_singer">Người trình bày [Nghệ danh(Tên
+                                thật)] <span class="req">*</span></label><input type="text" name="r_singer" required>
+                        </div>
+                        <div class="form-group"><label data-i18n="recording_producer">Nhà SX Âm nhạc [Nghệ danh(Tên
+                                thật)] <span class="req">*</span></label><input type="text" name="r_producer" required>
+                        </div>
+                        <div class="form-group"><label data-i18n="recording_owner">Chủ sở hữu [Nghệ danh(Tên thật)]
+                                <span class="req">*</span></label><input type="text" name="r_owner" required></div>
+                        <div class="form-group"><label data-i18n="recording_handover">Ngày bàn giao</label><input
+                                type="text" disabled value="[Tự động điền ngày hôm nay]"></div>
+                        <div class="form-group"><label data-i18n="recording_release">Ngày phát hành</label><input
+                                type="text" disabled value="[Tự động đồng bộ theo Label Form]">
+                            <div class="hint">Lấy từ ngày phát hành đã điền ở Product Label Form.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:1rem; margin-top:1rem;">
+                    <button type="button" class="upload-btn"
+                        style="display:flex; width:auto; padding: 1rem 2rem; background:rgba(255,255,255,0.1); box-shadow:none;"
+                        onclick="closeContractFormModal()" data-i18n="cancel">Hủy</button>
+                    <button type="submit" class="upload-btn" style="display:flex; width:auto; padding: 1rem 2.5rem;"
+                        id="submitContractBtn" data-i18n="save_contract">Tạo File Hợp Đồng</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- PR FORM MODAL -->
+    <div id="prFormModal"
+        style="display:none; position:fixed; inset:0; background:rgba(6,6,15,0.97); z-index:200; padding:2rem; overflow-y:auto;">
+        <div class="modal-content" style="max-width: 800px;">
+            <button class="modal-close" onclick="closePrFormModal()">×</button>
+            <h1 style="text-align:left; margin-top:0;" data-i18n="pr_modal_title">Chia sẻ thông tin Sản Phẩm</h1>
+            <p style="color:var(--text-muted); margin-bottom:2rem;" data-i18n="pr_modal_desc">Nhờ bạn trả lời các câu
+                hỏi dưới đây để chúng mình có thêm thông tin về sản phẩm và truyền tải đến khán giả một cách chính xác
+                nhất nhé.</p>
+
+            <form id="prForm" onsubmit="submitPrForm(event)">
+                <div class="form-section">
+                    <div class="form-grid">
+                        <div class="form-group full"><label data-i18n="q1">1. Mô tả một vài dòng về bài hát</label><textarea name="q1" rows="3"
+                                placeholder="VD: bài hát được lấy cảm hứng từ phim..."></textarea></div>
+                        <div class="form-group full"><label data-i18n="q2">2. Giới thiệu về bản thân và về sản phẩm bạn
+                                sắp phát hành</label><textarea name="q2" rows="3"></textarea></div>
+                        <div class="form-group full"><label data-i18n="q3">3. Bạn có đến từ hội nhóm, crew hay team nào
+                                không? Có thể giới thiệu qua một chút không?</label><textarea name="q3"
+                                rows="3"></textarea></div>
+                        <div class="form-group full"><label data-i18n="q4">4. Cảm hứng sáng tác bài hát này của bạn đến
+                                từ đâu?</label><textarea name="q4" rows="3"></textarea></div>
+                        <div class="form-group full"><label data-i18n="q5">5. Nếu là sản phẩm hợp tác, chia sẻ chút về
+                                lí do hợp tác và sự đồng điệu?</label><textarea name="q5" rows="3"></textarea></div>
+                        <div class="form-group full"><label data-i18n="q6">6. Thời điểm phát hành bài hát này có gì đặc
+                                biệt hay không?</label><textarea name="q6" rows="2"></textarea></div>
+                        <div class="form-group full"><label data-i18n="q7">7. Có ý nghĩa gì sâu xa từ cách đặt tên bài
+                                hát của bạn không?</label><textarea name="q7" rows="2"></textarea></div>
+                        <div class="form-group full"><label data-i18n="q8">8. Chất liệu âm nhạc chính/Thể loại bài hát
+                                là gì? Vì sao chọn nó?</label><textarea name="q8" rows="2"></textarea></div>
+                        <div class="form-group full"><label data-i18n="q9">9. Bạn mong muốn gửi gắm điều gì tới khán giả
+                                khi nghe bài hát?</label><textarea name="q9" rows="3"></textarea></div>
+                        <div class="form-group full"><label data-i18n="q10">10. Sản phẩm này là một trải nghiệm mới hay
+                                là thế mạnh trước giờ của bạn?</label><textarea name="q10" rows="3"></textarea></div>
+                        <div class="form-group full"><label data-i18n="q11">11. Bạn có kỷ niệm đặc biệt nào trong quá
+                                trình sản xuất không?</label><textarea name="q11" rows="3"></textarea></div>
+                        <div class="form-group full"><label data-i18n="q12">12. Dự định trong tương lai gần? Bạn đang
+                                hướng đến hình ảnh như thế nào?</label><textarea name="q12" rows="3"></textarea></div>
+                        <div class="form-group full"><label data-i18n="q13">13. Bạn muốn chia sẻ gì thêm cho sản phẩm
+                                sắp tới không?</label><textarea name="q13" rows="3"></textarea></div>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:1rem; margin-top:1rem;">
+                    <button type="button" class="upload-btn"
+                        style="display:flex; width:auto; padding: 1rem 2rem; background:rgba(255,255,255,0.1); box-shadow:none;"
+                        onclick="closePrFormModal()" data-i18n="cancel">Hủy</button>
+                    <button type="submit" class="upload-btn" style="display:flex; width:auto; padding: 1rem 2.5rem;"
+                        id="submitPrBtn" data-i18n="save_pr">Lưu & Tạo Câu Hỏi (Google Docs)</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <script>
+        const categories = [
+            { id: 'audio', name: 'Audio Files', desc: '16-24 Bit Depth WAV', icon: '🎵', multiple: true },
+            { id: 'artwork', name: 'Artwork', desc: '3000x3000px JPG/PNG', icon: '🖼️', multiple: true },
+            { id: 'artist_picture', name: 'Artist Pictures', desc: 'Cover / Profile photos', icon: '📸', multiple: true },
+            { id: 'mv', name: 'Music Video', desc: 'MP4/MOV formats', icon: '🎬', multiple: true },
+            { id: 'canvas', name: 'Spotify Canvas', desc: '4-8s vertical video (9:16)', icon: '📱', multiple: true },
+            { id: 'others', name: 'Other Materials', desc: 'Lyrics, stems, credits...', icon: '📦', multiple: true }
+        ];
+
+        function validateWav1624Bit(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    try {
+                        const buffer = e.target.result;
+                        if (buffer.byteLength < 44) { resolve({ valid: false, errorType: 'NOT_WAV' }); return; }
+                        const view = new DataView(buffer);
+
+                        // Check RIFF
+                        const riff = String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3));
+                        if (riff !== 'RIFF') { resolve({ valid: false, errorType: 'NOT_WAV' }); return; }
+
+                        // Check WAVE
+                        const wave = String.fromCharCode(view.getUint8(8), view.getUint8(9), view.getUint8(10), view.getUint8(11));
+                        if (wave !== 'WAVE') { resolve({ valid: false, errorType: 'NOT_WAV' }); return; }
+
+                        // Loop to find 'fmt ' chunk
+                        let offset = 12;
+                        while (offset < buffer.byteLength - 8) {
+                            const chunkId = String.fromCharCode(view.getUint8(offset), view.getUint8(offset + 1), view.getUint8(offset + 2), view.getUint8(offset + 3));
+                            const chunkSize = view.getUint32(offset + 4, true);
+
+                            if (chunkId === 'fmt ') {
+                                const bitsPerSampleOffset = offset + 8 + 14;
+                                if (bitsPerSampleOffset + 2 <= buffer.byteLength) {
+                                    const bitsPerSample = view.getUint16(bitsPerSampleOffset, true);
+                                    if (bitsPerSample === 16 || bitsPerSample === 24) {
+                                        resolve({ valid: true });
+                                    } else {
+                                        resolve({ valid: false, errorType: 'INVALID_BIT_DEPTH', bitDepth: bitsPerSample });
+                                    }
+                                    return;
+                                }
+                            }
+                            offset += 8 + chunkSize;
+                        }
+                        resolve({ valid: false, errorType: 'NOT_WAV' });
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file.slice(0, 4096)); // Read first 4KB to find header securely
+            });
+        }
+
+        let releaseId = null;
+        let isLabelFormCompiled = false;
+        let isContractFormCompiled = false;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            releaseId = urlParams.get('id');
+
+            if (!releaseId) {
+                showError("No Release ID provided in the URL.");
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/release/${releaseId}`);
+                if (!res.ok) throw new Error("Release not found. Double check your link.");
+                const data = await res.json();
+
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('releaseInfo').style.display = 'block';
+                document.getElementById('labelTriggerCard').style.display = 'flex';
+                const cTrigger = document.getElementById('contractTriggerCard');
+                if (cTrigger) cTrigger.style.display = 'flex';
+                const prTrigger = document.getElementById('prTriggerCard');
+                if (prTrigger) prTrigger.style.display = 'flex';
+                document.getElementById('uploadGrid').style.display = 'grid';
+                document.getElementById('submitBtn').style.display = 'flex';
+
+                document.getElementById('rProduct').innerText = data.product_name;
+                document.getElementById('rArtist').innerText = data.artist_name || "Unknown Artist";
+
+                // Pre-fill initial form fields
+                document.getElementById('pf_title').value = data.product_name;
+                document.getElementById('pf_artist').value = data.artist_name || "";
+
+                // Tự động tải danh sách Bank từ VietQR
+                try {
+                    const resBank = await fetch('https://api.vietqr.io/v2/banks');
+                    const jsonBank = await resBank.json();
+                    if (jsonBank.code === "00") {
+                        let opts = '<option value="" disabled selected>-- Bấm để Chọn Ngân Hàng --</option>';
+                        jsonBank.data.forEach(b => {
+                            opts += `<option value="${b.shortName} - ${b.name}">[${b.shortName}] ${b.name}</option>`;
+                        });
+                        const pSelect = document.querySelector('select[name="p_bank_brand"]');
+                        const cSelect = document.querySelector('select[name="c_bank_brand"]');
+                        if (pSelect) pSelect.innerHTML = opts;
+                        if (cSelect) cSelect.innerHTML = opts;
+
+                        // Khôi phục lại value cũ từ localStorage nếu có
+                        const saved = JSON.parse(localStorage.getItem('contractForm_' + releaseId) || '{}');
+                        if (saved['p_bank_brand']) pSelect.value = saved['p_bank_brand'];
+                        if (saved['c_bank_brand']) cSelect.value = saved['c_bank_brand'];
+                    }
+                } catch (e) {
+                    console.error("Lỗi tải danh sách ngân hàng", e);
+                }
+
+                // --- RESTORE LABEL FORM STATE (if exists) ---
+                const savedFormDataStr = localStorage.getItem('labelForm_' + releaseId);
+                let savedFormData = null;
+                if (savedFormDataStr) {
+                    try {
+                        savedFormData = JSON.parse(savedFormDataStr);
+                        // Restore non-track fields
+                        for (const key in savedFormData) {
+                            const el = document.getElementsByName(key)[0];
+                            if (el && !key.match(/^t\d+_/)) {
+                                el.value = savedFormData[key];
+                            }
+                        }
+                    } catch (e) { }
+                }
+
+                // Load categories
+                renderUploadGrid();
+
+                // Initial track generation
+                generateTrackForms();
+
+                // Restore track fields AFTER generating tracks
+                if (savedFormData) {
+                    for (const key in savedFormData) {
+                        const el = document.getElementsByName(key)[0];
+                        if (el && key.match(/^t\d+_/)) {
+                            el.value = savedFormData[key];
+                        }
+                    }
+                }
+
+                // Restore Label Form Submission Status
+                if (localStorage.getItem('labelFormDone_' + releaseId) === "true") {
+                    const triggerCard = document.getElementById('labelTriggerCard');
+                    triggerCard.classList.add('completed');
+                    document.getElementById('labelTriggerStatus').innerText = "Đã Điền Thành Công ✓";
+                    isLabelFormCompiled = true;
+                }
+
+                // Restore Contract Form Submission Status
+                if (localStorage.getItem('contractFormDone_' + releaseId) === "true") {
+                    const cTriggerCard = document.getElementById('contractTriggerCard');
+                    if (cTriggerCard) {
+                        cTriggerCard.classList.add('completed');
+                        document.getElementById('contractTriggerStatus').innerText = "Đã Điền Thành Công ✓";
+                        isContractFormCompiled = true;
+                    }
+                }
+
+                // RESTORE Contract Form State
+                const savedContractDataStr = localStorage.getItem('contractForm_' + releaseId);
+                if (savedContractDataStr) {
+                    try {
+                        let parsedC = JSON.parse(savedContractDataStr);
+                        for (const key in parsedC) {
+                            const el = document.forms['contractForm'].elements[key];
+                            if (el && el.type !== 'file') {
+                                el.value = parsedC[key];
+                            }
+                        }
+                        toggleContractFields();
+                    } catch (e) { }
+                }
+
+                // Default toggle check
+                toggleContractFields();
+
+                // Auto-save label form on input changes
+                document.getElementById('metadataForm').addEventListener('input', () => {
+                    const fData = new FormData(document.getElementById('metadataForm'));
+                    const dataObj = Object.fromEntries(fData.entries());
+                    localStorage.setItem('labelForm_' + releaseId, JSON.stringify(dataObj));
+                });
+
+                // Auto-save contract form on input changes
+                document.getElementById('contractForm').addEventListener('input', () => {
+                    const fData = new FormData(document.getElementById('contractForm'));
+                    const dataObj = {};
+                    for (let [key, val] of fData.entries()) {
+                        if (typeof val === 'string') dataObj[key] = val;
+                    }
+                    localStorage.setItem('contractForm_' + releaseId, JSON.stringify(dataObj));
+                });
+
+                // Start Polling for Status
+                if (data.status) {
+                    updateStatusUI(data.status);
+                }
+                startStatusPolling(releaseId);
+
+            } catch (err) {
+                showError(err.message);
+            }
+        });
+
+        function updateStatusUI(status) {
+            const lang = typeof currentLang !== 'undefined' ? currentLang : 'vi';
+            // handle initial undefined translation dict gracefully or fallback
+            const filledText = (typeof translations !== 'undefined' && translations[lang] && translations[lang].status_filled) ? translations[lang].status_filled : "Đã Điền Thành Công ✓";
+            const upText = (typeof translations !== 'undefined' && translations[lang] && translations[lang].already_uploaded) ? translations[lang].already_uploaded : "✓ Đã tải lên";
+
+            // Label Form
+            if (status.label_form && status.label_form.completed) {
+                const triggerCard = document.getElementById('labelTriggerCard');
+                if (triggerCard && !triggerCard.classList.contains('completed')) {
+                    triggerCard.classList.add('completed');
+                    const timeStr = status.label_form.timestamp ? new Date(status.label_form.timestamp).toLocaleString('vi-VN') : '';
+                    document.getElementById('labelTriggerStatus').innerText = `${filledText} ${timeStr !== '' ? '('+timeStr+')' : ''}`;
+                    isLabelFormCompiled = true;
+                }
+            }
+
+            // Contract Form
+            if (status.contract && status.contract.completed) {
+                const triggerCard = document.getElementById('contractTriggerCard');
+                if (triggerCard && !triggerCard.classList.contains('completed')) {
+                    triggerCard.classList.add('completed');
+                    const timeStr = status.contract.timestamp ? new Date(status.contract.timestamp).toLocaleString('vi-VN') : '';
+                    document.getElementById('contractTriggerStatus').innerText = `${filledText} ${timeStr !== '' ? '('+timeStr+')' : ''}`;
+                    isContractFormCompiled = true;
+                }
+            }
+
+            // PR Form
+            if (status.pr_form && status.pr_form.completed) {
+                const triggerCard = document.getElementById('prTriggerCard');
+                if (triggerCard && !triggerCard.classList.contains('completed')) {
+                    triggerCard.classList.add('completed');
+                    const timeStr = status.pr_form.timestamp ? new Date(status.pr_form.timestamp).toLocaleString('vi-VN') : '';
+                    document.getElementById('prTriggerStatus').innerText = `${filledText} ${timeStr !== '' ? '('+timeStr+')' : ''}`;
+                    if (typeof isPrFormCompiled !== 'undefined') isPrFormCompiled = true;
+                }
+            }
+
+            // Categories
+            categories.forEach(cat => {
+                if (status[cat.id] && status[cat.id].completed) {
+                    const card = document.getElementById(`card_${cat.id}`);
+                    if (card && !card.classList.contains('success-border')) {
+                        card.classList.add('success-border');
+                        const timeStr = status[cat.id].timestamp ? new Date(status[cat.id].timestamp).toLocaleString('vi-VN') : '';
+                        let successMsg = card.querySelector('.live-success-msg');
+                        if (!successMsg) {
+                            successMsg = document.createElement('div');
+                            successMsg.className = 'live-success-msg';
+                            successMsg.style = 'color:var(--success); font-size:0.8rem; margin-top:5px; font-weight:bold;';
+                            const input = card.querySelector('input');
+                            if (input) card.insertBefore(successMsg, input);
+                        }
+                        successMsg.innerText = `${upText} ${timeStr !== '' ? '('+timeStr+')' : ''}`;
+                    }
+                }
+            });
+        }
+
+        function startStatusPolling(relId) {
+            setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/release/${relId}`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    if (data.status) {
+                        updateStatusUI(data.status);
+                    }
+                } catch (e) {
+                    console.warn("Polling error:", e);
+                }
+            }, 5000);
+        }
+
+        function showError(msg) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'block';
+            document.getElementById('errorMsg').innerText = msg;
+        }
+
+        function renderUploadGrid() {
+            const grid = document.getElementById('uploadGrid');
+            grid.innerHTML = '';
+
+            const uploadedArr = JSON.parse(localStorage.getItem('uploaded_' + releaseId) || "[]");
+
+            categories.forEach(cat => {
+                const isUploaded = uploadedArr.includes(cat.id);
+                const card = document.createElement('div');
+                card.className = 'upload-card' + (isUploaded ? ' success-border' : '');
+                card.id = `card_${cat.id}`;
+
+                card.innerHTML = `
+                    <div class="icon">${cat.icon}</div>
+                    <div class="name">${cat.name}</div>
+                    <div class="desc">${cat.desc}</div>
+                    ${isUploaded ? '<div style="color:var(--success); font-size:0.8rem; margin-top:5px; font-weight:bold;">✓ Đã tải lên lần trước</div>' : ''}
+                    <input type="file" name="${cat.id}" id="input_${cat.id}" ${cat.multiple ? 'multiple' : ''}>
+                    <div class="file-list" id="list_${cat.id}"></div>
+                `;
+
+                grid.appendChild(card);
+
+                const input = card.querySelector('input');
+
+                // Drag and drop styles
+                input.addEventListener('dragenter', () => card.classList.add('dragover'));
+                input.addEventListener('dragleave', () => card.classList.remove('dragover'));
+                input.addEventListener('drop', () => card.classList.remove('dragover'));
+
+                // Handle file selection
+                input.addEventListener('change', async () => {
+                    const listContainer = document.getElementById(`list_${cat.id}`);
+                    listContainer.innerHTML = '';
+
+                    if (cat.id === 'audio' && input.files.length > 0) {
+                        const dt = new DataTransfer();
+                        card.classList.remove('has-file');
+
+                        for (const file of Array.from(input.files)) {
+                            const ext = file.name.split('.').pop().toLowerCase();
+                            if (ext !== 'wav') {
+                                const err = document.createElement('div');
+                                err.style.color = '#fb7185';
+                                err.style.fontSize = '0.85rem';
+                                err.style.marginTop = '0.25rem';
+                                err.innerText = `❌ LỖI: File của bạn không có đuôi .WAV. Vui lòng upload đúng định dạng Audio.`;
+                                listContainer.appendChild(err);
+                                continue;
+                            }
+
+                            try {
+                                const validation = await validateWav1624Bit(file);
+                                if (validation.valid) {
+                                    dt.items.add(file);
+                                    const li = document.createElement('div');
+                                    li.className = 'file-item';
+                                    li.innerText = file.name;
+                                    listContainer.appendChild(li);
+                                } else {
+                                    const err = document.createElement('div');
+                                    err.style.color = '#fb7185';
+                                    err.style.fontSize = '0.85rem';
+                                    err.style.marginTop = '0.25rem';
+
+                                    if (validation.errorType === 'NOT_WAV') {
+                                        err.innerText = `❌ LỖI ĐỊNH DẠNG: File gốc không phải chuẩn WAV hợp lệ. Vui lòng kiểm tra lại.`;
+                                    } else if (validation.errorType === 'INVALID_BIT_DEPTH') {
+                                        err.innerText = `❌ LỖI ĐỊNH DẠNG: File '${file.name}' là WAV nhưng ở ${validation.bitDepth}-bit depth. Vui lòng chỉ tải lên bản 16-bit hoặc 24-bit.`;
+                                    } else {
+                                        err.innerText = `❌ LỖI ĐỊNH DẠNG: '${file.name}' không hợp lệ.`;
+                                    }
+
+                                    listContainer.appendChild(err);
+                                }
+                            } catch (e) {
+                                const err = document.createElement('div');
+                                err.style.color = '#fb7185';
+                                err.style.fontSize = '0.85rem';
+                                err.style.marginTop = '0.25rem';
+                                err.innerText = `❌ LỖI ĐỌC FILE: '${file.name}' (${e.message})`;
+                                listContainer.appendChild(err);
+                            }
+                        }
+
+                        // Update input files with only valid ones
+                        input.files = dt.files;
+                        if (input.files.length > 0) {
+                            card.classList.add('has-file');
+                        }
+                    } else {
+                        // Other categories
+                        if (input.files.length > 0) {
+                            card.classList.add('has-file');
+                            Array.from(input.files).forEach(f => {
+                                const li = document.createElement('div');
+                                li.className = 'file-item';
+                                li.innerText = f.name;
+                                listContainer.appendChild(li);
+                            });
+                        } else {
+                            card.classList.remove('has-file');
+                        }
+                    }
+                });
+            });
+        }
+
+        // --- Label Form Modal Logic ---
+        function openLabelFormModal() {
+            document.getElementById('labelFormModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            document.body.classList.add('modal-open');
+        }
+
+        function closeLabelFormModal() {
+            document.getElementById('labelFormModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            document.body.classList.remove('modal-open');
+        }
+
+        // --- Contract Form Modal Logic ---
+        function openContractFormModal() {
+            document.getElementById('contractFormModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            document.body.classList.add('modal-open');
+
+            // Sync Product Title into Contract form
+            let prdTitle = document.getElementById('pf_title').value;
+            if (prdTitle) {
+                document.forms['contractForm'].elements['r_title'].value = prdTitle;
+            }
+        }
+
+        function closeContractFormModal() {
+            document.getElementById('contractFormModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            document.body.classList.remove('modal-open');
+        }
+
+        function toggleContractFields() {
+            const type = document.getElementById('contractType').value;
+            const pSec = document.getElementById('personalSection');
+            const cSec = document.getElementById('companySection');
+
+            // Find required fields inside and toggle "required" attribute
+            const pInputs = pSec.querySelectorAll('input, select');
+            const cInputs = cSec.querySelectorAll('input, select');
+
+            if (type === 'personal') {
+                pSec.style.display = 'block';
+                cSec.style.display = 'none';
+
+                // Add required to all inputs that have a span.req label preceding them
+                pInputs.forEach(i => { if (i.name && i.type !== 'file' && !i.name.includes("old") && !i.name.includes("new") && !i.name.includes("branch")) i.setAttribute('required', 'true') });
+                cInputs.forEach(i => i.removeAttribute('required'));
+                // Ensure specific files are req
+                if (!isContractFormCompiled) {
+                    document.forms['contractForm'].elements['cccd_front'].setAttribute('required', 'true');
+                    document.forms['contractForm'].elements['cccd_back'].setAttribute('required', 'true');
+                }
+
+                document.forms['contractForm'].elements['c_dkkd'].removeAttribute('required');
+                document.forms['contractForm'].elements['c_uyquyen'].removeAttribute('required');
+
+            } else {
+                pSec.style.display = 'none';
+                cSec.style.display = 'block';
+
+                cInputs.forEach(i => { if (i.name && i.type !== 'file') i.setAttribute('required', 'true') });
+                pInputs.forEach(i => i.removeAttribute('required'));
+
+                if (!isContractFormCompiled) {
+                    document.forms['contractForm'].elements['c_dkkd'].setAttribute('required', 'true');
+                    document.forms['contractForm'].elements['c_uyquyen'].setAttribute('required', 'true');
+                }
+
+                document.forms['contractForm'].elements['cccd_front'].removeAttribute('required');
+                document.forms['contractForm'].elements['cccd_back'].removeAttribute('required');
+            }
+        }
+
+        // Submitting Contract Form
+        async function submitContractForm(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitContractBtn');
+            btn.innerText = "Đang tải lên...";
+            btn.disabled = true;
+
+            const fData = new FormData(e.target);
+
+            try {
+                const res = await fetch(`/api/release/${releaseId}/submit-contract`, {
+                    method: 'POST',
+                    body: fData
+                });
+
+                if (!res.ok) {
+                    const errObj = await res.json();
+                    throw new Error(errObj.error || "Gặp lỗi tạo File hợp đồng");
+                }
+
+                closeContractFormModal();
+
+                const triggerCard = document.getElementById('contractTriggerCard');
+                triggerCard.classList.add('completed');
+                document.getElementById('contractTriggerStatus').innerText = "Đã Điền Thành Công ✓";
+                isContractFormCompiled = true;
+                localStorage.setItem('contractFormDone_' + releaseId, "true");
+
+                // Remove required for files on future edits
+                toggleContractFields();
+
+                alert("Đã lưu Hợp đồng thành công!");
+
+            } catch (err) {
+                alert(err.message);
+            } finally {
+                btn.innerText = "Tạo File Hợp Đồng";
+                btn.disabled = false;
+            }
+        }
+
+        function generateTrackForms() {
+            const count = parseInt(document.getElementById('trackCountInput').value) || 1;
+            const container = document.getElementById('tracksContainer');
+            if (count < 1) return;
+
+            // Backup current data
+            const backup = [];
+            for (let i = 1; i <= container.children.length; i++) {
+                backup.push({
+                    title: document.getElementById(`t${i}_title`)?.value || '',
+                    version: document.getElementById(`t${i}_version`)?.value || '',
+                    mainArtist: document.getElementById(`t${i}_mainArtist`)?.value || '',
+                    featArtist: document.getElementById(`t${i}_featArtist`)?.value || '',
+                    profile: document.getElementById(`t${i}_profile`)?.value || '',
+                    composer: document.getElementById(`t${i}_composer`)?.value || '',
+                    writer: document.getElementById(`t${i}_writer`)?.value || '',
+                    producer: document.getElementById(`t${i}_producer`)?.value || '',
+                    genre: document.getElementById(`t${i}_genre`)?.value || '',
+                    lang: document.getElementById(`t${i}_lang`)?.value || '',
+                    year: document.getElementById(`t${i}_year`)?.value || '',
+                    explicit: document.getElementById(`t${i}_explicit`)?.value || '',
+                    lyrics: document.getElementById(`t${i}_lyrics`)?.value || '',
+                    tiktok: document.getElementById(`t${i}_tiktok`)?.value || ''
+                });
+            }
+
+            let html = '';
+            for (let i = 1; i <= count; i++) {
+                html += `
+                <div class="track-box">
+                    <h4>Track ${i}</h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Tên bài hát <span class="req">*</span></label>
+                            <input type="text" id="t${i}_title" name="t${i}_title" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Phiên bản (Tùy chọn)</label>
+                            <input type="text" id="t${i}_version" name="t${i}_version" placeholder="VD: Remix, Acoustic">
+                        </div>
+                        <div class="form-group">
+                            <label>Main Artist <span class="req">*</span></label>
+                            <input type="text" id="t${i}_mainArtist" name="t${i}_mainArtist" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Featured Artist (Tùy chọn)</label>
+                            <input type="text" id="t${i}_featArtist" name="t${i}_featArtist">
+                        </div>
+                        <div class="form-group full">
+                            <label>Artist Profile (Link Spotify hiện tại - Tùy chọn)</label>
+                            <input type="text" id="t${i}_profile" name="t${i}_profile" placeholder="Nếu chưa có thì bỏ trống">
+                        </div>
+                        <div class="form-group">
+                            <label>Composer (Phần Nhạc) <span class="req">*</span></label>
+                            <input type="text" id="t${i}_composer" name="t${i}_composer" required placeholder="Nghệ danh + Họ tên thật">
+                        </div>
+                        <div class="form-group">
+                            <label>Writer (Phần Lời) <span class="req">*</span></label>
+                            <input type="text" id="t${i}_writer" name="t${i}_writer" required placeholder="Nghệ danh + Họ tên thật">
+                        </div>
+                        <div class="form-group">
+                            <label>Producer <span class="req">*</span></label>
+                            <input type="text" id="t${i}_producer" name="t${i}_producer" required placeholder="Nghệ danh + Họ tên thật">
+                        </div>
+                        ${count > 1 ? `
+                        <div class="form-group">
+                            <label>Thể loại (Track Genre) <span class="req">*</span></label>
+                            <input type="text" id="t${i}_genre" name="t${i}_genre" required placeholder="VD: Pop, Hiphop">
+                        </div>
+                        ` : ''}
+                        <div class="form-group">
+                            <label>Audio Language (Tùy chọn)</label>
+                            <input type="text" id="t${i}_lang" name="t${i}_lang" placeholder="VD: Vietnamese">
+                        </div>
+                        <div class="form-group">
+                            <label>Năm phát hành gốc (Tùy chọn)</label>
+                            <input type="number" id="t${i}_year" name="t${i}_year" placeholder="VD: 2024">
+                        </div>
+                        <div class="form-group">
+                            <label>Ngôn từ nhạy cảm (Explicit) <span class="req">*</span></label>
+                            <select id="t${i}_explicit" name="t${i}_explicit" required>
+                                <option value="" disabled selected>Chọn</option>
+                                <option value="Yes">Có (Yes)</option>
+                                <option value="No">Không (No)</option>
+                            </select>
+                        </div>
+                        <div class="form-group full">
+                            <label>TikTok Sound Timecode (Ít nhất 1, tối đa 2 sound)</label>
+                            <input type="text" id="t${i}_tiktok" name="t${i}_tiktok" placeholder="Ví dụ: 0:00-0:30, 2:10-2:45">
+                            <div class="hint">Giải thích: Đây là đoạn âm thanh dưới 60s được cắt ra từ bài hát gốc để sử dụng làm âm thanh chính thức phát hành trên nền tảng TikTok.</div>
+                        </div>
+                        <div class="form-group full">
+                            <label>Lyrics <span class="req">*</span></label>
+                            <input type="text" id="t${i}_lyrics" name="t${i}_lyrics" required placeholder="Dán link folder lời bài hát hoặc text">
+                        </div>
+                    </div>
+                </div>
+                `;
+            }
+            container.innerHTML = html;
+
+            // Restore
+            for (let i = 1; i <= Math.min(count, backup.length); i++) {
+                const b = backup[i - 1];
+                document.getElementById(`t${i}_title`).value = b.title;
+                document.getElementById(`t${i}_version`).value = b.version;
+                document.getElementById(`t${i}_mainArtist`).value = b.mainArtist;
+                document.getElementById(`t${i}_featArtist`).value = b.featArtist;
+                document.getElementById(`t${i}_profile`).value = b.profile;
+                document.getElementById(`t${i}_composer`).value = b.composer;
+                document.getElementById(`t${i}_writer`).value = b.writer;
+                if (document.getElementById(`t${i}_genre`)) {
+                    document.getElementById(`t${i}_genre`).value = b.genre || '';
+                }
+                document.getElementById(`t${i}_lang`).value = b.lang;
+                document.getElementById(`t${i}_year`).value = b.year;
+                document.getElementById(`t${i}_explicit`).value = b.explicit;
+                document.getElementById(`t${i}_lyrics`).value = b.lyrics;
+                document.getElementById(`t${i}_tiktok`).value = b.tiktok;
+            }
+        }
+
+        // Submitting Label Form
+        document.getElementById('metadataForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitMetadataBtn');
+            btn.innerText = "Đang xử lý...";
+            btn.disabled = true;
+
+            const fData = new FormData(e.target);
+            const data = Object.fromEntries(fData.entries());
+
+            // Restructure track data
+            const trackCount = parseInt(data.trackCount) || 1;
+            const tracks = [];
+            for (let i = 1; i <= trackCount; i++) {
+                tracks.push({
+                    title: data[`t${i}_title`],
+                    version: data[`t${i}_version`],
+                    mainArtist: data[`t${i}_mainArtist`],
+                    featArtist: data[`t${i}_featArtist`],
+                    profile: data[`t${i}_profile`],
+                    composer: data[`t${i}_composer`],
+                    writer: data[`t${i}_writer`],
+                    producer: data[`t${i}_producer`],
+                    genre: data[`t${i}_genre`],
+                    lang: data[`t${i}_lang`],
+                    year: data[`t${i}_year`],
+                    explicit: data[`t${i}_explicit`],
+                    lyrics: data[`t${i}_lyrics`],
+                    tiktok: data[`t${i}_tiktok`]
+                });
+            }
+
+            const payload = {
+                productTitle: data.productTitle,
+                productType: data.productType,
+                productArtist: data.productArtist,
+                genre: data.genre,
+                releaseDate: data.releaseDate,
+                releaseTime: data.releaseTime,
+                preorderDate: data.preorderDate,
+                preorderTime: data.preorderTime,
+                tracks: tracks
+            };
+
+            try {
+                const res = await fetch(`/api/release/${releaseId}/label-form`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    const errObj = await res.json();
+                    throw new Error(errObj.error || "Gặp lỗi khi tạo Label Form");
+                }
+
+                closeLabelFormModal();
+
+                const triggerCard = document.getElementById('labelTriggerCard');
+                triggerCard.classList.add('completed');
+                document.getElementById('labelTriggerStatus').innerText = "Đã Điền Thành Công ✓";
+                isLabelFormCompiled = true;
+                localStorage.setItem('labelFormDone_' + releaseId, "true");
+
+            } catch (err) {
+                alert(err.message);
+            } finally {
+                btn.innerText = "Lưu & Khởi Tạo Form Excel";
+                btn.disabled = false;
+            }
+        });
+
+        // Warn user before leaving page if files are selected
+        window.addEventListener('beforeunload', (e) => {
+            let hasFiles = false;
+            categories.forEach(cat => {
+                const input = document.getElementById(`input_${cat.id}`);
+                if (input && input.files && input.files.length > 0) hasFiles = true;
+            });
+            if (hasFiles) {
+                e.preventDefault();
+                e.returnValue = ''; // Standard way to show browser confirmation dialog
+            }
+        });
+
+        // Submitting File Uploads
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!isLabelFormCompiled) {
+                if (!confirm("Bạn chưa điền Product Label Form (Bắt buộc). Bạn có muốn tiếp tục đẩy file lên Drive không?")) {
+                    return;
+                }
+            }
+
+            const activeCategories = [];
+            categories.forEach(cat => {
+                const input = document.getElementById(`input_${cat.id}`);
+                if (input.files.length > 0) {
+                    activeCategories.push({
+                        categoryId: cat.id,
+                        files: input.files,
+                        cardId: `card_${cat.id}`
+                    });
+                }
+            });
+
+            if (activeCategories.length === 0) {
+                alert("Please select at least one file to upload (or fill the label form).");
+                return;
+            }
+
+            // Confirm before submitting
+            if (!confirm("Bạn đã chắc chắn muốn gửi các file này chưa? Hãy đảm bảo không bỏ sót thông tin!")) {
+                return;
+            }
+
+            // Show Progress UI
+            const overlay = document.getElementById('progressOverlay');
+            overlay.style.display = 'flex';
+            document.getElementById('modalSpinner').style.display = 'block';
+            document.getElementById('modalSuccess').style.display = 'none';
+            document.getElementById('submitBtn').disabled = true;
+
+            let completed = 0;
+            const total = activeCategories.length;
+            document.getElementById('modalSubstatus').innerText = `0 / ${total} categories complete`;
+
+            for (const item of activeCategories) {
+                const formData = new FormData();
+                formData.append("category", item.categoryId);
+                Array.from(item.files).forEach(f => {
+                    formData.append("files", f);
+                });
+
+                document.getElementById('modalStatus').innerText = `Uploading ${item.categoryId}...`;
+
+                try {
+                    const res = await fetch(`/api/release/${releaseId}/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!res.ok) {
+                        const errData = await res.json();
+                        throw new Error(errData.error || "Upload failed");
+                    }
+
+                    // Visual feedback on card
+                    document.getElementById(item.cardId).classList.add('success-border');
+
+                    // Save upload state to localStorage
+                    let uArr = JSON.parse(localStorage.getItem('uploaded_' + releaseId) || "[]");
+                    if (!uArr.includes(item.categoryId)) {
+                        uArr.push(item.categoryId);
+                        localStorage.setItem('uploaded_' + releaseId, JSON.stringify(uArr));
+                    }
+
+                } catch (err) {
+                    alert(`Failed to upload ${item.categoryId}: ${err.message}`);
+                }
+
+                completed++;
+                document.getElementById('modalSubstatus').innerText = `${completed} / ${total} categories complete`;
+            }
+
+            // Finish
+            document.getElementById('modalSpinner').style.display = 'none';
+            document.getElementById('modalSuccess').style.display = 'block';
+            document.getElementById('modalStatus').innerText = "All uploads completed!";
+            document.getElementById('modalSubstatus').innerText = "You can close this page now.";
+
+            document.getElementById('submitBtn').innerText = "Upload Complete";
+            document.getElementById('submitBtn').disabled = true;
+
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 3000);
+        });
+
+        let isPrFormCompiled = false;
+
+        function openPrFormModal() {
+            document.getElementById('prFormModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            document.body.classList.add('modal-open');
+        }
+
+        function closePrFormModal() {
+            document.getElementById('prFormModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            document.body.classList.remove('modal-open');
+        }
+
+        async function submitPrForm(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitPrBtn');
+            btn.innerText = "Đang tạo Docs...";
+            btn.disabled = true;
+
+            const fData = new FormData(e.target);
+            const payload = Object.fromEntries(fData.entries());
+
+            try {
+                const res = await fetch(`/api/release/${releaseId}/submit-pr-form`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    const errObj = await res.json();
+                    throw new Error(errObj.error || "Gặp lỗi tạo File Câu Hỏi");
+                }
+
+                closePrFormModal();
+
+                const triggerCard = document.getElementById('prTriggerCard');
+                if (triggerCard) {
+                    triggerCard.classList.add('completed');
+                    document.getElementById('prTriggerStatus').innerText = "Đã Điền ✓";
+                }
+                isPrFormCompiled = true;
+                localStorage.setItem('prFormDone_' + releaseId, "true");
+                alert("Đã tạo file Google Docs Bảng câu hỏi Truyền thông thành công!");
+
+            } catch (err) {
+                alert(err.message);
+            } finally {
+                btn.innerText = "Lưu & Tạo Câu Hỏi (Google Docs)";
+                btn.disabled = false;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!releaseId) {
+                const urlParams = new URLSearchParams(window.location.search);
+                releaseId = urlParams.get('id');
+            }
+            if (localStorage.getItem('prFormDone_' + releaseId) === "true") {
+                const prCard = document.getElementById('prTriggerCard');
+                if (prCard) {
+                    prCard.classList.add('completed');
+                    document.getElementById('prTriggerStatus').innerText = "Đã Điền ✓";
+                    isPrFormCompiled = true;
+                }
+            }
+            const savedPrDataStr = localStorage.getItem('prForm_' + releaseId);
+            if (savedPrDataStr) {
+                try {
+                    let parsed = JSON.parse(savedPrDataStr);
+                    for (const key in parsed) {
+                        const el = document.forms['prForm'].elements[key];
+                        if (el) el.value = parsed[key];
+                    }
+                } catch (e) { }
+            }
+            const prFormEl = document.getElementById('prForm');
+            if (prFormEl) {
+                prFormEl.addEventListener('input', () => {
+                    const fData = new FormData(document.getElementById('prForm'));
+                    const dataObj = Object.fromEntries(fData.entries());
+                    localStorage.setItem('prForm_' + releaseId, JSON.stringify(dataObj));
+                });
+            }
+        });
+
+        // ═══════ SETTINGS: Logo Size ═══════
+        function revealGear() {
+            const gear = document.getElementById('settingsGear');
+            if (!gear) return;
+            if (gear.style.display === 'none' || !gear.style.display) {
+                gear.style.display = 'block';
+            } else {
+                gear.style.display = 'none';
+                document.getElementById('settingsPanel').style.display = 'none';
+            }
+        }
+
+        function updatePortalLogoSize(val) {
+            const logo = document.getElementById('portalLogo');
+            if (logo) logo.style.maxHeight = val + 'px';
+            const valDisplay = document.getElementById('logoSizeVal');
+            if (valDisplay) valDisplay.innerText = val + 'px';
+            localStorage.setItem('portalLogoSize', val);
+        }
+
+        // Restore logo size on load
+        (function () {
+            const savedSize = localStorage.getItem('portalLogoSize');
+            if (savedSize) {
+                const slider = document.getElementById('logoSizeSlider');
+                if (slider) slider.value = savedSize;
+                updatePortalLogoSize(savedSize);
+            }
+        })();
+
+        // ═══════ i18n LANGUAGE SYSTEM ═══════
+        let currentLang = localStorage.getItem('portalLang') || 'vi';
+
+        const translations = {
+            vi: {
+                page_title: 'Artist Portal',
+                page_subtitle: 'Gửi tài liệu phát hành một cách an toàn',
+                loading: 'Đang tải thông tin phát hành...',
+                error_title: 'Liên kết không hợp lệ',
+                error_msg: 'Liên kết upload không hợp lệ hoặc đã hết hạn.',
+                release_initiated: 'Sản Phẩm',
+                label_form_title: 'Product Label Form',
+                label_form_desc: 'Khai báo Metadata phát hành cho sản phẩm (Bắt buộc)',
+                contract_title: 'Contract Info',
+                contract_desc: 'Khai báo thông tin hợp đồng phát hành nhạc (Bắt buộc)',
+                pr_title: 'Câu Hỏi Về Sản Phẩm',
+                pr_desc: 'Chia sẻ thêm thông tin (Tùy chọn)',
+                status_not_filled: 'Chưa Điền',
+                status_filled: 'Đã Điền Thành Công ✓',
+                submit_files: 'Gửi File',
+                settings_logo_size: 'Chỉnh kích cỡ Logo:',
+                // Label Form Modal
+                label_modal_title: 'Label Form',
+                label_modal_desc: 'Điền đầy đủ thông tin chi tiết của sản phẩm để tự động khởi tạo trên Google Drive.',
+                product_info: '💿 Thông tin Sản Phẩm',
+                product_name: 'Tên sản phẩm',
+                product_type: 'Loại sản phẩm',
+                select_type: 'Chọn loại',
+                performing_artist: 'Nghệ sĩ biểu diễn',
+                genre: 'Thể loại (Genre)',
+                track_count: 'Số lượng Track',
+                release_date: 'Ngày phát hành',
+                release_time: 'Giờ phát hành',
+                preorder_date: 'Ngày Pre-order (Tùy chọn)',
+                preorder_time: 'Giờ Pre-order (Tùy chọn)',
+                track_info: '🎵 Thông Tin Track',
+                cancel: 'Hủy',
+                save_label: 'Lưu & Khởi Tạo Form Excel',
+                // Contract Form Modal
+                contract_modal_title: 'Contract Info',
+                contract_modal_desc: 'Điền thông tin hợp đồng phát hành nhạc. Hệ thống sẽ tự tạo file Word.',
+                contract_type_label: 'Hình thức ký Hợp đồng',
+                contract_personal: 'Ký Cá nhân',
+                contract_company: 'Ký theo Công ty',
+                personal_info: '👤 Thông tin khách hàng (cá nhân)',
+                full_name: 'Họ tên người ký Hợp đồng',
+                stage_name: 'Nghệ danh',
+                dob: 'Sinh ngày',
+                cccd_num: 'CCCD số',
+                cccd_date: 'Cấp ngày',
+                cccd_place: 'Tại',
+                address_old: 'Địa chỉ hiện tại (cũ)',
+                address_new: 'Địa chỉ hiện tại (theo hành chính mới từ 01/07/2025)',
+                phone: 'Điện thoại',
+                email: 'Email',
+                tax_code: 'Mã số thuế cá nhân',
+                bank_account: 'Số tài khoản',
+                bank_holder: 'Tên tài khoản',
+                bank_name: 'Ngân hàng',
+                bank_branch: 'Chi nhánh',
+                personal_docs: '📸 Ảnh Giấy tờ cá nhân',
+                cccd_front: 'Hình CCCD mặt trước',
+                cccd_back: 'Hình CCCD mặt sau',
+                vneid_img: 'Hình chụp CCCD điện tử (VNeID)',
+                vneid_hint: 'Chụp màn hình trang "Căn cước điện tử" trong ứng dụng VNeID (như mẫu bên dưới).',
+                vneid_sample: '📷 Xem ảnh mẫu hướng dẫn chụp VNeID',
+                company_info: '🏢 Trường hợp ký Công ty',
+                company_name: 'Tên CÔNG TY',
+                company_rep: 'Đại diện',
+                company_role: 'Chức vụ',
+                company_address: 'Địa chỉ',
+                company_bank_num: 'Tài khoản',
+                company_bank_holder: 'CHỦ TK',
+                company_bank_name: 'Tại ngân hàng',
+                company_tax: 'Mã số thuế',
+                company_docs: '📜 Giấy tờ Công ty',
+                company_dkkd: 'Giấy ĐKKD (PDF/Image)',
+                company_uyquyen: 'Giấy ủy quyền nghệ sĩ (PDF/Image)',
+                recording_info: '💿 Thông tin bản ghi',
+                recording_name: 'Tên Bản ghi (Tên SP)',
+                recording_author: 'Tác giả [Nghệ danh(Tên thật)]',
+                recording_singer: 'Người trình bày [Nghệ danh(Tên thật)]',
+                recording_producer: 'Nhà SX Âm nhạc [Nghệ danh(Tên thật)]',
+                recording_owner: 'Chủ sở hữu [Nghệ danh(Tên thật)]',
+                recording_handover: 'Ngày bàn giao',
+                recording_release: 'Ngày phát hành',
+                save_contract: 'Tạo File Hợp Đồng',
+                // PR Form
+                pr_modal_title: 'Chia sẻ thông tin Sản Phẩm',
+                pr_modal_desc: 'Nhờ bạn trả lời các câu hỏi dưới đây để chúng mình có thêm thông tin về sản phẩm và truyền tải đến khán giả một cách chính xác nhất nhé.',
+                save_pr: 'Lưu & Tạo Câu Hỏi (Google Docs)',
+                q1: '1. Mô tả một vài dòng về bài hát',
+                q2: '2. Giới thiệu về bản thân và về sản phẩm bạn sắp phát hành',
+                q3: '3. Bạn có đến từ hội nhóm, crew hay team nào không? Có thể giới thiệu qua một chút không?',
+                q4: '4. Cảm hứng sáng tác bài hát này của bạn đến từ đâu?',
+                q5: '5. Nếu là sản phẩm hợp tác, chia sẻ chút về lí do hợp tác và sự đồng điệu?',
+                q6: '6. Thời điểm phát hành bài hát này có gì đặc biệt hay không?',
+                q7: '7. Có ý nghĩa gì sâu xa từ cách đặt tên bài hát của bạn không?',
+                q8: '8. Chất liệu âm nhạc chính/Thể loại bài hát là gì? Vì sao chọn nó?',
+                q9: '9. Bạn mong muốn gửi gắm điều gì tới khán giả khi nghe bài hát?',
+                q10: '10. Sản phẩm này là một trải nghiệm mới hay là thế mạnh trước giờ của bạn?',
+                q11: '11. Bạn có kỷ niệm đặc biệt nào trong quá trình sản xuất không?',
+                q12: '12. Dự định trong tương lai gần? Bạn đang hướng đến hình ảnh như thế nào?',
+                q13: '13. Bạn muốn chia sẻ gì thêm cho sản phẩm sắp tới không?',
+                // Upload progress
+                uploading: 'Đang tải lên...',
+                processing: 'Đang xử lý...',
+                upload_complete: 'Tải lên hoàn tất',
+                all_uploads_done: 'Hoàn tất tất cả!',
+                categories_complete: 'mục hoàn tất',
+                close_page: 'Bạn có thể đóng trang này.',
+                already_uploaded: '✓ Đã tải lên lần trước'
+            },
+            en: {
+                page_title: 'Artist Portal',
+                page_subtitle: 'Securely transfer your release assets',
+                loading: 'Fetching release details...',
+                error_title: 'Invalid Link',
+                error_msg: 'This upload link is invalid or has expired.',
+                release_initiated: 'Release Initiated',
+                label_form_title: 'Product Label Form',
+                label_form_desc: 'Declare release metadata for the product (Required)',
+                contract_title: 'Contract Info',
+                contract_desc: 'Declare music release contract information (Required)',
+                pr_title: 'Product Questions',
+                pr_desc: 'Share additional information (Optional)',
+                status_not_filled: 'Not Filled',
+                status_filled: 'Completed ✓',
+                submit_files: 'Submit Files',
+                settings_logo_size: 'Adjust Logo Size:',
+                // Label Form Modal
+                label_modal_title: 'Label Form',
+                label_modal_desc: 'Fill in complete product details to auto-generate on Google Drive.',
+                product_info: '💿 Product Info',
+                product_name: 'Product Name',
+                product_type: 'Product Type',
+                select_type: 'Select type',
+                performing_artist: 'Performing Artist',
+                genre: 'Genre',
+                track_count: 'Track Count',
+                release_date: 'Release Date',
+                release_time: 'Release Time',
+                preorder_date: 'Pre-order Date (Optional)',
+                preorder_time: 'Pre-order Time (Optional)',
+                track_info: '🎵 Track Info',
+                cancel: 'Cancel',
+                save_label: 'Save & Generate Excel Form',
+                // Contract Form Modal
+                contract_modal_title: 'Contract Info',
+                contract_modal_desc: 'Fill in music release contract information. The system will auto-generate a Word file.',
+                contract_type_label: 'Contract Signing Type',
+                contract_personal: 'Sign as Individual',
+                contract_company: 'Sign as Company',
+                personal_info: '👤 Customer Info (Individual)',
+                full_name: 'Full Name of Contract Signer',
+                stage_name: 'Stage Name',
+                dob: 'Date of Birth',
+                cccd_num: 'ID Card Number',
+                cccd_date: 'Issue Date',
+                cccd_place: 'Issued At',
+                address_old: 'Current Address (old)',
+                address_new: 'Current Address (new administrative from 01/07/2025)',
+                phone: 'Phone',
+                email: 'Email',
+                tax_code: 'Personal Tax Code',
+                bank_account: 'Account Number',
+                bank_holder: 'Account Holder',
+                bank_name: 'Bank',
+                bank_branch: 'Branch',
+                personal_docs: '📸 Personal ID Photos',
+                cccd_front: 'ID Card Front Photo',
+                cccd_back: 'ID Card Back Photo',
+                vneid_img: 'Digital ID Screenshot (VNeID)',
+                vneid_hint: 'Screenshot the "Digital ID" page from the VNeID app (see example below).',
+                vneid_sample: '📷 View VNeID screenshot guide',
+                company_info: '🏢 Company Signing',
+                company_name: 'Company Name',
+                company_rep: 'Representative',
+                company_role: 'Position',
+                company_address: 'Address',
+                company_bank_num: 'Account Number',
+                company_bank_holder: 'Account Holder',
+                company_bank_name: 'Bank',
+                company_tax: 'Tax Code',
+                company_docs: '📜 Company Documents',
+                company_dkkd: 'Business Registration (PDF/Image)',
+                company_uyquyen: 'Artist Authorization (PDF/Image)',
+                recording_info: '💿 Recording Info',
+                recording_name: 'Recording Name (Product Name)',
+                recording_author: 'Author [Stage Name (Real Name)]',
+                recording_singer: 'Performer [Stage Name (Real Name)]',
+                recording_producer: 'Music Producer [Stage Name (Real Name)]',
+                recording_owner: 'Owner [Stage Name (Real Name)]',
+                recording_handover: 'Handover Date',
+                recording_release: 'Release Date',
+                save_contract: 'Generate Contract File',
+                // PR Form
+                pr_modal_title: 'Share Product Information',
+                pr_modal_desc: 'Please answer the questions below so we can better understand your product and communicate it accurately to the audience.',
+                save_pr: 'Save & Create Q&A (Google Docs)',
+                q1: '1. Describe the song in a few lines',
+                q2: '2. Introduce yourself and the product you are about to release',
+                q3: '3. Do you belong to any group, crew, or team? Can you briefly introduce them?',
+                q4: '4. Where did the inspiration for this song come from?',
+                q5: '5. If it\'s a collaboration, share about the reason for collaborating?',
+                q6: '6. Is there anything special about the release timing?',
+                q7: '7. Is there a deeper meaning behind the song title?',
+                q8: '8. What is the main musical style/genre? Why did you choose it?',
+                q9: '9. What message do you want to convey to the audience?',
+                q10: '10. Is this product a new experience or your established strength?',
+                q11: '11. Do you have any special memories from the production process?',
+                q12: '12. Future plans? What image are you aiming for?',
+                q13: '13. Anything else you\'d like to share about the upcoming product?',
+                // Upload progress
+                uploading: 'Uploading...',
+                processing: 'Processing...',
+                upload_complete: 'Upload Complete',
+                all_uploads_done: 'All uploads completed!',
+                categories_complete: 'categories complete',
+                close_page: 'You can close this page now.',
+                already_uploaded: '✓ Previously uploaded'
+            }
+        };
+
+        function applyLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('portalLang', lang);
+
+            // Update toggle button
+            document.getElementById('langFlag').textContent = lang === 'vi' ? '🇻🇳' : '🇺🇸';
+            document.getElementById('langLabel').textContent = lang === 'vi' ? 'VI' : 'EN';
+
+            // Update all elements with data-i18n attribute
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[lang][key]) {
+                    el.textContent = translations[lang][key];
+                }
+            });
+
+            // Handle completed status overrides
+            if (isLabelFormCompiled) {
+                document.getElementById('labelTriggerStatus').textContent = translations[lang].status_filled;
+            }
+            if (isContractFormCompiled) {
+                document.getElementById('contractTriggerStatus').textContent = translations[lang].status_filled;
+            }
+            if (isPrFormCompiled) {
+                document.getElementById('prTriggerStatus').textContent = translations[lang].status_filled;
+            }
+        }
+
+        function toggleLanguage() {
+            applyLanguage(currentLang === 'vi' ? 'en' : 'vi');
+        }
+
+        // Apply saved language on load
+        (function () {
+            const saved = localStorage.getItem('portalLang');
+            if (saved) {
+                applyLanguage(saved);
+            } else {
+                applyLanguage('vi');
+            }
+        })();
+    </script>
+</body>
+
+</html>
