@@ -112,6 +112,11 @@ def update_release_status(release_id: str, section_key: str):
         doc_ref.set(data)
 
 # --- Routes ---
+@app.get("/")
+async def root_redirect():
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/portal")
+
 @app.get("/portal")
 async def serve_portal():
     return FileResponse(os.path.join(BASE_DIR, "static", "portal.html"))
