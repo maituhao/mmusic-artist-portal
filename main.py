@@ -117,7 +117,7 @@ async def root_redirect():
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url="/portal")
 
-@app.get("/portal")
+@app.api_route("/portal", methods=["GET", "HEAD"])
 async def serve_portal():
     return FileResponse(os.path.join(BASE_DIR, "static", "portal.html"))
 
