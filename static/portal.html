@@ -964,28 +964,13 @@
             <span id="langLabel">VI</span>
         </div>
 
-        <!-- Settings Gear (hidden by default - click logo to reveal) -->
-        <div class="settings-gear" id="settingsGear"
-            onclick="document.getElementById('settingsPanel').style.display = document.getElementById('settingsPanel').style.display === 'none' ? 'block' : 'none'"
-            title="Cài đặt giao diện">
-            ⚙️
-        </div>
-
         <div style="text-align: center; margin-bottom: 1rem;">
-            <img src="/static/logo.png" alt="MMusic Logo" id="portalLogo"
-                style="max-height: 69px; transition: max-height 0.1s; cursor: pointer;" title="🤫"
-                onclick="revealGear()" onerror="this.style.display='none'">
-        </div>
-
-        <!-- Settings Panel -->
-        <div class="settings-panel" id="settingsPanel">
-            <label
-                style="font-size: 0.85rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; color: var(--text-muted);">
-                <span data-i18n="settings_logo_size">Chỉnh kích cỡ Logo:</span>
-                <span id="logoSizeVal">69px</span>
-            </label>
-            <input type="range" id="logoSizeSlider" min="20" max="300" value="69" style="width: 100%;"
-                oninput="updatePortalLogoSize(this.value)">
+            <a href="https://www.facebook.com/mmusicrecords" target="_blank" rel="noopener noreferrer" title="MMusic Records Fanpage">
+                <img src="/static/logo.png" alt="MMusic Logo" id="portalLogo"
+                    style="max-height: 69px; cursor: pointer; transition: opacity 0.2s;"
+                    onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'"
+                    onerror="this.style.display='none'">
+            </a>
         </div>
 
         <h1 data-i18n="page_title">Artist Portal</h1>
@@ -2273,34 +2258,7 @@
         });
 
         // ═══════ SETTINGS: Logo Size ═══════
-        function revealGear() {
-            const gear = document.getElementById('settingsGear');
-            if (!gear) return;
-            if (gear.style.display === 'none' || !gear.style.display) {
-                gear.style.display = 'block';
-            } else {
-                gear.style.display = 'none';
-                document.getElementById('settingsPanel').style.display = 'none';
-            }
-        }
 
-        function updatePortalLogoSize(val) {
-            const logo = document.getElementById('portalLogo');
-            if (logo) logo.style.maxHeight = val + 'px';
-            const valDisplay = document.getElementById('logoSizeVal');
-            if (valDisplay) valDisplay.innerText = val + 'px';
-            localStorage.setItem('portalLogoSize', val);
-        }
-
-        // Restore logo size on load
-        (function () {
-            const savedSize = localStorage.getItem('portalLogoSize');
-            if (savedSize) {
-                const slider = document.getElementById('logoSizeSlider');
-                if (slider) slider.value = savedSize;
-                updatePortalLogoSize(savedSize);
-            }
-        })();
 
         // ═══════ i18n LANGUAGE SYSTEM ═══════
         let currentLang = localStorage.getItem('portalLang') || 'vi';
