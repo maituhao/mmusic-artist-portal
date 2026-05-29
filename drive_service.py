@@ -71,7 +71,8 @@ def create_folder(service, name, parent_id):
 def upload_file(service, file_path, name, parent_id, mimetype=None):
     file_metadata = {
         'name': name,
-        'parents': [parent_id]
+        'parents': [parent_id],
+        'copyRequiresWriterPermission': True
     }
     
     # Tự động chuyển đổi sang Google Sheets/Docs và bỏ đuôi mở rộng

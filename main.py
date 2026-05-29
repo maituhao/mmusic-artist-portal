@@ -4,7 +4,7 @@ import uuid
 import shutil
 import datetime
 from fastapi import FastAPI, Request, Form, File, UploadFile
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -117,9 +117,38 @@ async def root_redirect():
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url="/portal")
 
-@app.api_route("/portal", methods=["GET", "HEAD"])
-async def serve_portal():
-    return FileResponse(os.path.join(BASE_DIR, "static", "portal.html"))
+@app.api_route("/portal", methods=["GET", "HEAD"], response_class=HTMLResponse)
+async def serve_portal(id: Optional[str] = None):
+    portal_path = os.path.join(BASE_DIR, "static", "portal.html")
+    if not os.path.exists(portal_path):
+        return HTMLResponse("File not found", status_code=404)
+        
+    with open(portal_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+
+    title = "Artist Upload Portal | MMUSIC"
+    meta_tags = ""
+
+    if id:
+        release_data = get_release(id)
+        if release_data:
+            artist_name = release_data.get("artist_name")
+            product_name = release_data.get("product_name")
+            if artist_name:
+                title = f"Artist Upload Portal | {artist_name} | MMUSIC"
+                meta_tags = f"""
+    <meta property="og:title" content="Artist Upload Portal | {artist_name} | MMUSIC" />
+    <meta property="og:description" content="Cổng tải lên tài nguyên sản phẩm {product_name or ''} của nghệ sĩ {artist_name}." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/static/logo.png" />
+                """
+
+    html_content = html_content.replace(
+        "<title>Artist Upload Portal | MMUSIC</title>",
+        f"<title>{title}</title>{meta_tags}"
+    )
+
+    return HTMLResponse(content=html_content, status_code=200)
 
 @app.get("/api/release/{release_id}")
 async def get_release_status(release_id: str):
