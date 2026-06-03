@@ -179,6 +179,7 @@ async def fill_label_form(release_id: str, payload: LabelFormRequest):
         
     try:
         import openpyxl
+        from openpyxl.styles import Alignment
         wb = openpyxl.load_workbook(template_path)
         ws = wb.active
         
@@ -219,6 +220,7 @@ async def fill_label_form(release_id: str, payload: LabelFormRequest):
             ws.cell(row=row, column=19, value=track.explicit)
             ws.cell(row=row, column=20, value=track.tiktok)
             ws.cell(row=row, column=21, value=track.lyrics)
+            ws.cell(row=row, column=21).alignment = Alignment(wrap_text=True, vertical='top')
         
         temp_filename = f"/tmp/{release_id}_label_form.xlsx"
         wb.save(temp_filename)
