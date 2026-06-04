@@ -314,6 +314,8 @@ async def submit_contract(release_id: str, request: Request):
             ]
             for label, key in fields:
                 val = form_data.get(key, '')
+                if key in ['p_dob', 'p_cccd_date']:
+                    val = format_date_ddmmyyyy(val)
                 if val: doc.add_paragraph(f"{label}: {val}")
                 
             doc.add_heading("II. Thông tin bản ghi", level=1)
@@ -348,6 +350,9 @@ async def submit_contract(release_id: str, request: Request):
                 val = form_data.get(key, '')
                 if val: doc.add_paragraph(f"{label}: {val}")
         
+        doc.add_paragraph("")
+        doc.add_paragraph("Ngày bàn giao (AR điền):")
+        doc.add_paragraph("Ngày phát hành (AR điền):")
         doc.add_paragraph("")
         doc.add_paragraph("Thời hạn hợp tác (MMusic điền): " + "_" * 40)
         doc.add_paragraph("Tỷ lệ chia sẻ doanh thu: 70/30 (nghệ sĩ 70%)")
