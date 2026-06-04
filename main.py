@@ -44,6 +44,17 @@ except Exception as e:
     print("Warning: Firebase not initialized:", e)
     db = None
 
+def format_date_ddmmyyyy(date_str):
+    if not date_str or not isinstance(date_str, str):
+        return date_str
+    try:
+        parts = date_str.split('-')
+        if len(parts) == 3 and len(parts[0]) == 4:
+            return f"{parts[2]}-{parts[1]}-{parts[0]}"
+    except Exception:
+        pass
+    return date_str
+
 # --- Models ---
 class TrackInfo(BaseModel):
     title: str
@@ -187,13 +198,13 @@ async def fill_label_form(release_id: str, payload: LabelFormRequest):
         ws['C5'] = payload.productType
         ws['C6'] = payload.productArtist
         ws['C7'] = payload.genre
-        ws['C8'] = payload.releaseDate
+        ws['C8'] = format_date_ddmmyyyy(payload.releaseDate)
         if payload.releaseTime:
             ws['C9'] = payload.releaseTime
             
         preorder_value = ""
         if payload.preorderDate:
-            preorder_value = payload.preorderDate
+            preorder_value = format_date_ddmmyyyy(payload.preorderDate)
             if payload.preorderTime:
                 preorder_value += " " + payload.preorderTime
         elif payload.preorderTime:
